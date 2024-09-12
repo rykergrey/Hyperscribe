@@ -1,0 +1,241 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { defaultFunctions, AIFunction } from '@/lib/functions'
+import { saveSession, loadSession, getSessionNames, Session } from '@/lib/sessionManager'
+import { SessionManager } from './SessionManager'
+import { executeFunction } from '@/lib/executeFunction' // Add this import
+
+// Dynamically import components that aren't immediately necessary
+const RawTranscript = dynamic(() => import('./RawTranscript'))
+const Summary = dynamic(() => import('./Summary'))
+const QuestionAnswer = dynamic(() => import('./QuestionAnswer'))
+const Sandbox = dynamic(() => import('./Sandbox'))
+
+export function Hyperscribe() {
+  const [file, setFile] = useState<File | null>(null)
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [session, setSession] = useState('')
+  const [rawTranscript, setRawTranscript] = useState('')
+  const [summary, setSummary] = useState('')
+  const [question, setQuestion] = useState('')
+  const [answer, setAnswer] = useState('')
+  const [sandboxText, setSandboxText] = useState('')
+  const [selectedFunction, setSelectedFunction] = useState('')
+  const [functions, setFunctions] = useState<Record<string, AIFunction>>(defaultFunctions)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+
+  const [sessions, setSessions] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchFunctions = async () => {
+      try {
+        const response = await fetch('/api/get-functions')
+        if (response.ok) {
+          const data = await response.json()
+          setFunctions(data.functions)
+        } else {
+          throw new Error('Failed to fetch functions')
+        }
+      } catch (error) {
+        console.error('Error fetching functions:', error)
+      }
+    }
+
+    fetchFunctions()
+    setSessions(getSessionNames())
+  }, [])
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFile(event.target.files[0])
+    }
+  }
+
+  const handleTranscribeAudio = async () => {
+    if (!file) return
+    setIsTranscribing(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
+      if (!response.ok) throw new Error('Failed to transcribe audio')
+      const data = await response.json()
+      setRawTranscript(data.transcript)
+    } catch (error) {
+      console.error('Error transcribing audio:', error)
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
+  const handleProcessYouTube = async () => {
+    if (!youtubeUrl) return
+    setIsTranscribing(true)
+    try {
+      const formData = new FormData()
+      formData.append('youtubeUrl', youtubeUrl)
+      const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
+      if (!response.ok) throw new Error('Failed to process YouTube video')
+      const data = await response.json()
+      setRawTranscript(data.transcript)
+    } catch (error) {
+      console.error('Error processing YouTube video:', error)
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
+  const handleExecuteFunction = async (functionName: string, input: string) => {
+    if (!functions[functionName]) return
+    try {
+      const result = await executeFunction(functions[functionName], input)
+      return result
+    } catch (error) {
+      console.error(`Error executing function ${functionName}:`, error)
+    }
+  }
+
+  const handleSaveSession = (sessionName: string) => {
+    const newSession: Session = {
+      name: sessionName,
+      youtubeUrl,
+      rawTranscript,
+      sandboxText,
+      summary,
+      question,
+      answer
+    }
+    saveSession(newSession)
+    setSessions(getSessionNames())
+  }
+
+  const handleLoadSession = (sessionName: string) => {
+    const loadedSession = loadSession(sessionName)
+    if (loadedSession) {
+      setSession(sessionName)
+      setYoutubeUrl(loadedSession.youtubeUrl)
+      setRawTranscript(loadedSession.rawTranscript)
+      setSandboxText(loadedSession.sandboxText)
+      setSummary(loadedSession.summary)
+      setQuestion(loadedSession.question)
+      setAnswer(loadedSession.answer)
+    }
+  }
+
+  const handleDeleteSession = (sessionName: string) => {
+    const updatedSessions = sessions.filter(s => s !== sessionName)
+    setSessions(updatedSessions)
+    if (session === sessionName) {
+      setSession('')
+      setYoutubeUrl('')
+      setRawTranscript('')
+      setSandboxText('')
+      setSummary('')
+      setQuestion('')
+      setAnswer('')
+    }
+  }
+
+  return (
+    <div className="min-h-screen animate-mesh-gradient text-gray-100 p-4 sm:p-8">
+      <div className="container mx-auto space-y-6">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-6 pt-1 pb-2 leading-tight">
+          HyperScribe
+        </h1>
+
+        <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-blue-400">Data Source</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-grow">
+                <Input 
+                  type="file" 
+                  onChange={handleFileChange} 
+                  className="w-full bg-gray-700 border-gray-600 text-gray-100" 
+                />
+              </div>
+              <Button 
+                onClick={handleTranscribeAudio} 
+                className="bg-blue-600 hover:bg-blue-700 w-[272px]"
+                disabled={!file || isTranscribing}
+              >
+                {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
+              </Button>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex-grow">
+                <Input 
+                  placeholder="Enter YouTube URL" 
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="w-full bg-gray-700 border-gray-600 text-gray-100"
+                />
+              </div>
+              <Button 
+                onClick={handleProcessYouTube} 
+                className="bg-purple-600 hover:bg-purple-700 w-[272px]"
+                disabled={isTranscribing}
+              >
+                Process YouTube
+              </Button>
+            </div>
+            <SessionManager 
+              session={session}
+              setSession={setSession}
+              sessions={sessions}
+              setSessions={setSessions}
+              onSaveSession={handleSaveSession}
+              onLoadSession={handleLoadSession}
+              onDeleteSession={handleDeleteSession}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6 flex flex-col">
+            <RawTranscript 
+              rawTranscript={rawTranscript} 
+              setRawTranscript={setRawTranscript}
+              setSandboxText={setSandboxText}
+            />
+            <Summary 
+              summary={summary}
+              setSummary={setSummary}
+              rawTranscript={rawTranscript}
+              functions={functions}
+              executeFunction={handleExecuteFunction}
+            />
+          </div>
+
+          <div className="space-y-6 flex flex-col">
+            <Sandbox 
+              sandboxText={sandboxText}
+              setSandboxText={setSandboxText}
+              selectedFunction={selectedFunction}
+              setSelectedFunction={setSelectedFunction}
+              functions={functions}
+              setFunctions={setFunctions}
+              executeFunction={handleExecuteFunction}
+            />
+            <QuestionAnswer 
+              question={question}
+              setQuestion={setQuestion}
+              answer={answer}
+              setAnswer={setAnswer}
+              rawTranscript={rawTranscript}
+              functions={functions}
+              executeFunction={handleExecuteFunction}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
