@@ -22,6 +22,7 @@ export const FunctionManager: React.FC<FunctionManagerProps> = ({
 }) => {
   const [currentFunction, setCurrentFunction] = useState<AIFunction>(functions[selectedFunction])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [newFunctionName, setNewFunctionName] = useState(selectedFunction)
 
   useEffect(() => {
@@ -46,59 +47,88 @@ export const FunctionManager: React.FC<FunctionManagerProps> = ({
     setIsDialogOpen(false)
   }
 
+  const handleDelete = () => {
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    const updatedFunctions = { ...functions }
+    delete updatedFunctions[selectedFunction]
+    setFunctions(updatedFunctions)
+    setSelectedFunction(Object.keys(updatedFunctions)[0] || '')
+    setIsDeleteDialogOpen(false)
+  }
+
+  const handleSaveChanges = () => {
+    setIsDialogOpen(true)
+  }
+
   return (
     <div className="space-y-4 bg-gray-700 p-4 rounded-md">
-      <div className="grid grid-cols-3 gap-4 items-center">
-        <Label htmlFor="systemPrompt" className="text-gray-200">System Prompt:</Label>
-        <Textarea
-          id="systemPrompt"
-          value={currentFunction?.systemPrompt || ''}
-          onChange={(e) => handleUpdateFunction({ systemPrompt: e.target.value })}
-          className="col-span-2 bg-gray-600 text-gray-200 border-gray-500"
-        />
+      <div className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <Label htmlFor="systemPrompt" className="text-gray-200 w-32">System Prompt:</Label>
+          <Textarea
+            id="systemPrompt"
+            value={currentFunction?.systemPrompt || ''}
+            onChange={(e) => handleUpdateFunction({ systemPrompt: e.target.value })}
+            className="flex-grow bg-gray-600 text-gray-200 border-gray-500"
+          />
+        </div>
 
-        <Label htmlFor="userPrompt" className="text-gray-200">User Prompt:</Label>
-        <Textarea
-          id="userPrompt"
-          value={currentFunction?.userPrompt || ''}
-          onChange={(e) => handleUpdateFunction({ userPrompt: e.target.value })}
-          className="col-span-2 bg-gray-600 text-gray-200 border-gray-500"
-        />
+        <div className="flex items-center space-x-4">
+          <Label htmlFor="userPrompt" className="text-gray-200 w-32">User Prompt:</Label>
+          <Textarea
+            id="userPrompt"
+            value={currentFunction?.userPrompt || ''}
+            onChange={(e) => handleUpdateFunction({ userPrompt: e.target.value })}
+            className="flex-grow bg-gray-600 text-gray-200 border-gray-500"
+          />
+        </div>
 
-        <Label htmlFor="temp" className="text-gray-200">Temperature:</Label>
-        <Input
-          id="temp"
-          type="number"
-          value={currentFunction?.temp || 0}
-          onChange={(e) => handleUpdateFunction({ temp: parseFloat(e.target.value) })}
-          className="col-span-2 bg-gray-600 text-gray-200 border-gray-500"
-        />
+        <div className="flex items-center space-x-4">
+          <Label htmlFor="temp" className="text-gray-200 w-32">Temperature:</Label>
+          <Input
+            id="temp"
+            type="number"
+            value={currentFunction?.temp || 0}
+            onChange={(e) => handleUpdateFunction({ temp: parseFloat(e.target.value) })}
+            className="flex-grow bg-gray-600 text-gray-200 border-gray-500"
+          />
+        </div>
 
-        <Label htmlFor="model" className="text-gray-200">Model:</Label>
-        <Select 
-          value={currentFunction?.model || ''} 
-          onValueChange={(value) => handleUpdateFunction({ model: value })}
-        >
-          <SelectTrigger className="col-span-2 bg-gray-600 text-gray-200 border-gray-500">
-            <SelectValue placeholder="Select model" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="gpt-4o">gpt-4o</SelectItem>
-            <SelectItem value="gpt4o-mini">gpt4o-mini</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center space-x-4">
+          <Label htmlFor="model" className="text-gray-200 w-32">Model:</Label>
+          <Select 
+            value={currentFunction?.model || ''} 
+            onValueChange={(value) => handleUpdateFunction({ model: value })}
+          >
+            <SelectTrigger className="flex-grow bg-gray-600 text-gray-200 border-gray-500">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gpt-4o">gpt-4o</SelectItem>
+              <SelectItem value="gpt4o-mini">gpt4o-mini</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Label htmlFor="maxTokens" className="text-gray-200">Max Tokens:</Label>
-        <Input
-          id="maxTokens"
-          type="number"
-          value={currentFunction?.maxTokens || 0}
-          onChange={(e) => handleUpdateFunction({ maxTokens: parseInt(e.target.value) })}
-          className="col-span-2 bg-gray-600 text-gray-200 border-gray-500"
-        />
+        <div className="flex items-center space-x-4">
+          <Label htmlFor="maxTokens" className="text-gray-200 w-32">Max Tokens:</Label>
+          <Input
+            id="maxTokens"
+            type="number"
+            value={currentFunction?.maxTokens || 0}
+            onChange={(e) => handleUpdateFunction({ maxTokens: parseInt(e.target.value) })}
+            className="flex-grow bg-gray-600 text-gray-200 border-gray-500"
+          />
+        </div>
       </div>
       
-      <Button onClick={handleSave} className="w-full bg-blue-600 hover:bg-blue-700 text-white">Save Changes</Button>
+      <div className="flex space-x-2">
+        <Button onClick={handleSave} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Save Changes</Button>
+        <Button onClick={handleDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Delete Function</Button>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-gray-800 text-gray-200">
@@ -115,6 +145,19 @@ export const FunctionManager: React.FC<FunctionManagerProps> = ({
           <DialogFooter>
             <Button onClick={() => setIsDialogOpen(false)} className="bg-gray-600 hover:bg-gray-700 text-white">Cancel</Button>
             <Button onClick={handleConfirmSave} className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-gray-800 text-gray-200">
+          <DialogHeader>
+            <DialogTitle>Delete Function</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete the function "{selectedFunction}"? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button onClick={() => setIsDeleteDialogOpen(false)} className="bg-gray-600 hover:bg-gray-700 text-white">Cancel</Button>
+            <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

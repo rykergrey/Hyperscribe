@@ -32,8 +32,8 @@ export function SessionManager({ session, setSession, sessions, setSessions, onS
   }
 
   return (
-    <div className="flex items-center space-x-4 w-full">
-      <Select onValueChange={handleLoadSession} value={session} className="flex-grow">
+    <div className="flex flex-col space-y-2 w-full sm:flex-row sm:space-y-0 sm:space-x-4 sm:items-center">
+      <Select onValueChange={handleLoadSession} value={session}>
         <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-gray-100">
           <SelectValue placeholder="Select session">
             {session || "Select session"}
@@ -46,10 +46,10 @@ export function SessionManager({ session, setSession, sessions, setSessions, onS
         </SelectContent>
       </Select>
       
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white w-32">Save Session</Button>
+            <Button variant="outline" className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-32">Save Session</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-gray-800 text-gray-100">
             <DialogHeader>
@@ -64,14 +64,14 @@ export function SessionManager({ session, setSession, sessions, setSessions, onS
                 className="bg-gray-700 border-gray-600 text-gray-100"
               />
             </div>
-            <Button onClick={handleSaveSession} className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+            <Button onClick={handleSaveSession} className="bg-green-600 hover:bg-green-700" disabled={!newSessionName.trim()}>Save Session</Button>
           </DialogContent>
         </Dialog>
 
         <Button 
           onClick={() => onDeleteSession(session)} 
           variant="outline" 
-          className="bg-red-600 hover:bg-red-700 text-white w-32"
+          className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-32"
           disabled={!session}
         >
           Delete Session

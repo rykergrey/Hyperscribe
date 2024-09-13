@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import formidable from 'formidable'
 import fs from 'fs'
-import { Configuration, OpenAIApi } from 'openai'
+import OpenAI from 'openai'
 
 export const config = {
   api: {
@@ -9,10 +9,9 @@ export const config = {
   },
 }
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
-const openai = new OpenAIApi(configuration)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -25,16 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error parsing form data' })
     }
 
-    const file = files.file as formidable.File
+    const file = files.file?.[0] as formidable.File
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
-
     try {
-      const response = await openai.createTranscription(
-        fs.createReadStream(file.filepath) as any,
-        'whisper-1'
-      )
+      const response = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(file.filepath),
+        model: 'whisper-1'
+      })
 
       res.status(200).json({ transcript: response.data.text })
     } catch (error) {

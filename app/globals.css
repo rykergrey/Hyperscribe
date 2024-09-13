@@ -2,122 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+.bg-gradient-animation {
+  background: linear-gradient(
+    -45deg,
+    #a40000,  /* Dark Purple */
+    #000000,  /* Very Dark Purple */
+    #690076,  /* Dark Purple */
+    #001e57,
+    #000000,  /* Very Dark Purple */
+    #940449  /* Very Dark Purple */
+  );
+  background-size: 100% 500%;
+  animation: gradientRandom 500s ease infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes gradientRandom {
+  0% { background-position: 0% 50%; }
+  20% { background-position: 100% 20%; }
+  40% { background-position: 60% 100%; }
+  60% { background-position: 20% 0%; }
+  80% { background-position: 80% 70%; }
+  100% { background-position: 0% 50%; }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .animate-gradient-background {
-    animation: gradient-background 15s ease infinite;
-  }
-
-  @keyframes gradient-background {
-    0%, 100% {
-      transform: rotate(0deg);
-    }
-    50% {
-      transform: rotate(180deg);
-    }
-  }
-}
-
-@layer utilities {
-  .animate-mesh-gradient {
-    background-color: #1a0033; /* Darker base color */
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%), 
-      radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%), 
-      radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%),
-      radial-gradient(at 0% 100%, hsla(253, 16%, 7%, 1) 0, transparent 50%), 
-      radial-gradient(at 50% 100%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
-    background-size: 200% 200%;
-    animation: gradient-background 120s ease infinite;
-  }
-
-  @keyframes gradient-background {
-    0%, 100% {
-      background-position: 0% 0%;
-    }
-    25% {
-      background-position: 100% 0%;
-    }
-    50% {
-      background-position: 100% 100%;
-    }
-    75% {
-      background-position: 0% 100%;
-    }
-  }
+@keyframes color-shift {
+  0%, 100% { --gradient-color: #4C1D95; } /* Purple */
+  20% { --gradient-color: #7C3AED; } /* Light Purple */
+  40% { --gradient-color: #C026D3; } /* Pink */
+  60% { --gradient-color: #DB2777; } /* Dark Pink */
+  80% { --gradient-color: #E11D48; } /* Red */
+  90% { --gradient-color: #F97316; } /* Orange */
 }
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
+ 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
   }
 }
 
@@ -156,4 +116,25 @@ body {
 /* Allow grid items to grow */
 .grid {
   flex-grow: 1;
+}
+
+.bg-gradient-static {
+  background: radial-gradient(ellipse at top, var(--gradient-color) 0%, rgba(0, 0, 0, 0.9) 50%, black 100%);
+  background-size: 100% 100%;
+  opacity: 0;
+  transition: opacity 3s ease-out;
+}
+
+.bg-gradient-fade-in {
+  opacity: 1;
+}
+
+/* Add this new class */
+.gradient-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
 }

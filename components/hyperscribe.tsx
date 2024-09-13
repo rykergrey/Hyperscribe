@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { defaultFunctions, AIFunction } from '@/lib/functions'
 import { saveSession, loadSession, getSessionNames, Session } from '@/lib/sessionManager'
 import { SessionManager } from './SessionManager'
-import { executeFunction } from '@/lib/executeFunction' // Add this import
+import { executeFunction } from '@/lib/executeFunction'
 
 // Dynamically import components that aren't immediately necessary
 const RawTranscript = dynamic(() => import('./RawTranscript'))
@@ -16,9 +16,8 @@ const Summary = dynamic(() => import('./Summary'))
 const QuestionAnswer = dynamic(() => import('./QuestionAnswer'))
 const Sandbox = dynamic(() => import('./Sandbox'))
 
-export function Hyperscribe() {
-  const [file, setFile] = useState<File | null>(null)
-  const [youtubeUrl, setYoutubeUrl] = useState('')
+export default function Hyperscribe() {
+  const [youtubeUrl, setYoutubeUrl] = useState<string>('')
   const [session, setSession] = useState('')
   const [rawTranscript, setRawTranscript] = useState('')
   const [summary, setSummary] = useState('')
@@ -30,6 +29,8 @@ export function Hyperscribe() {
   const [isTranscribing, setIsTranscribing] = useState(false)
 
   const [sessions, setSessions] = useState<string[]>([])
+
+  const [file, setFile] = useState<File | null>(null)
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -141,98 +142,122 @@ export function Hyperscribe() {
     }
   }
 
+  const appendToSandbox = (text: string) => {
+    setSandboxText(prevText => prevText + (prevText ? '\n\n' : '') + text);
+  };
+
   return (
-    <div className="min-h-screen animate-mesh-gradient text-gray-100 p-4 sm:p-8">
-      <div className="container mx-auto space-y-6">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-6 pt-1 pb-2 leading-tight">
-          HyperScribe
-        </h1>
-
-        <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-blue-400">Data Source</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-grow">
-                <Input 
-                  type="file" 
-                  onChange={handleFileChange} 
-                  className="w-full bg-gray-700 border-gray-600 text-gray-100" 
-                />
-              </div>
-              <Button 
-                onClick={handleTranscribeAudio} 
-                className="bg-blue-600 hover:bg-blue-700 w-[272px]"
-                disabled={!file || isTranscribing}
+    <div className="min-h-screen overflow-hidden relative">
+      <div className="gradient-container">
+        <div className="absolute inset-0 bg-gradient-animation"></div>
+      </div>
+      <div className="relative z-10 container mx-auto p-4">
+        <div className="container mx-auto space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl sm:text-5xl font-extrabold pb-1 leading-none uppercase">
+              <span
+                style={{
+                  background: 'linear-gradient(90deg, #3B82F6, #B794F4, #F7F7F7, #FBD38D)',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                  display: 'inline-block',
+                  textShadow: 'none'
+                }}
               >
-                {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
-              </Button>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex-grow">
-                <Input 
-                  placeholder="Enter YouTube URL" 
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="w-full bg-gray-700 border-gray-600 text-gray-100"
-                />
-              </div>
-              <Button 
-                onClick={handleProcessYouTube} 
-                className="bg-purple-600 hover:bg-purple-700 w-[272px]"
-                disabled={isTranscribing}
-              >
-                Process YouTube
-              </Button>
-            </div>
-            <SessionManager 
-              session={session}
-              setSession={setSession}
-              sessions={sessions}
-              setSessions={setSessions}
-              onSaveSession={handleSaveSession}
-              onLoadSession={handleLoadSession}
-              onDeleteSession={handleDeleteSession}
-            />
-          </CardContent>
-        </Card>
+                HYPERSCRIBE.AI
+              </span>
+            </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-6 flex flex-col">
-            <RawTranscript 
-              rawTranscript={rawTranscript} 
-              setRawTranscript={setRawTranscript}
-              setSandboxText={setSandboxText}
-            />
-            <Summary 
-              summary={summary}
-              setSummary={setSummary}
-              rawTranscript={rawTranscript}
-              functions={functions}
-              executeFunction={handleExecuteFunction}
-            />
+            <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-blue-400">Data Source</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-grow">
+                    <Input 
+                      type="file" 
+                      onChange={handleFileChange} 
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100" 
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleTranscribeAudio} 
+                    className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
+                    disabled={!file || isTranscribing}
+                  >
+                    {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex-grow">
+                    <Input 
+                      placeholder="Enter YouTube URL" 
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleProcessYouTube} 
+                    className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
+                    disabled={!youtubeUrl || isTranscribing}
+                  >
+                    Process YouTube
+                  </Button>
+                </div>
+                <SessionManager 
+                  session={session}
+                  setSession={setSession}
+                  sessions={sessions}
+                  setSessions={setSessions}
+                  onSaveSession={handleSaveSession}
+                  onLoadSession={handleLoadSession}
+                  onDeleteSession={handleDeleteSession}
+                />
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="space-y-6 flex flex-col">
-            <Sandbox 
-              sandboxText={sandboxText}
-              setSandboxText={setSandboxText}
-              selectedFunction={selectedFunction}
-              setSelectedFunction={setSelectedFunction}
-              functions={functions}
-              setFunctions={setFunctions}
-              executeFunction={handleExecuteFunction}
-            />
-            <QuestionAnswer 
-              question={question}
-              setQuestion={setQuestion}
-              answer={answer}
-              setAnswer={setAnswer}
-              rawTranscript={rawTranscript}
-              functions={functions}
-              executeFunction={handleExecuteFunction}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6 flex flex-col">
+              <RawTranscript 
+                rawTranscript={rawTranscript} 
+                setRawTranscript={setRawTranscript}
+                appendToSandbox={appendToSandbox}
+              />
+              <QuestionAnswer 
+                question={question}
+                setQuestion={setQuestion}
+                answer={answer}
+                setAnswer={setAnswer}
+                rawTranscript={rawTranscript}
+                functions={functions}
+                executeFunction={handleExecuteFunction}
+                appendToSandbox={appendToSandbox}
+              />
+            </div>
+
+            <div className="space-y-6 flex flex-col">
+              <Summary 
+                summary={summary}
+                setSummary={setSummary}
+                rawTranscript={rawTranscript}
+                functions={functions}
+                executeFunction={handleExecuteFunction}
+                appendToSandbox={appendToSandbox}
+              />
+              <Sandbox 
+                sandboxText={sandboxText}
+                setSandboxText={setSandboxText}
+                selectedFunction={selectedFunction}
+                setSelectedFunction={setSelectedFunction}
+                functions={functions}
+                setFunctions={setFunctions}
+                executeFunction={handleExecuteFunction}
+              />
+            </div>
           </div>
         </div>
       </div>

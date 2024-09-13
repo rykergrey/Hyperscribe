@@ -55,9 +55,50 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
-  		}
-  	}
+  		},
+  		animation: {
+  			'gradient-animation': 'gradient 10s ease infinite',
+  		},
+  		keyframes: {
+  			gradient: {
+  				'0%, 100%': { 'background-position': '0% 0%' },
+  				'50%': { 'background-position': '100% 100%' },
+  			},
+  		},
+  	},
+  	backgroundImage: {
+  		'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
+  	},
+  	animation: {
+  		'gradient-shift': 'gradient-shift 20s ease-in-out infinite',
+  	},
+  	keyframes: {
+  		'gradient-shift': {
+  			'0%, 100%': { 'background-position': '0% 50%' },
+  			'50%': { 'background-position': '100% 50%' },
+  			'gradient-shift-fast': {
+  				'0%, 100%': { '--gradient-color': '#4C1D95' }, /* Purple */
+  				'25%': { '--gradient-color': '#1E3A8A' }, /* Dark Blue */
+  				'50%': { '--gradient-color': '#F97316' }, /* Orange */
+  				'75%': { '--gradient-color': '#000000' }, /* Black */
+  			},
+  		},
+  	},
+  	animation: {
+  		'color-shift': 'color-shift 10s ease-in-out infinite',
+  	},
+  	keyframes: {
+  		'color-shift': {
+  			'0%, 100%': { '--gradient-color': '#4C1D95' },
+  			'20%': { '--gradient-color': '#7C3AED' },
+  			'40%': { '--gradient-color': '#C026D3' },
+  			'60%': { '--gradient-color': '#DB2777' },
+  			'80%': { '--gradient-color': '#E11D48' },
+  			'90%': { '--gradient-color': '#F97316' },
+  		},
+  	},
   },
   plugins: [require("tailwindcss-animate")],
 };
+
 export default config;

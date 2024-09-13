@@ -3,10 +3,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AIFunction } from '@/lib/functions'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 import MDEditor from '@uiw/react-md-editor'
+import { FunctionManager } from './FunctionManager'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Custom styles for the MDEditor
 const mdEditorStyles = {
@@ -16,11 +23,11 @@ const mdEditorStyles = {
 
 interface SandboxProps {
   sandboxText: string
-  setSandboxText: (text: string) => void
+  setSandboxText: React.Dispatch<React.SetStateAction<string>>
   selectedFunction: string
-  setSelectedFunction: (functionName: string) => void
+  setSelectedFunction: React.Dispatch<React.SetStateAction<string>>
   functions: Record<string, AIFunction>
-  setFunctions: (functions: Record<string, AIFunction>) => void
+  setFunctions: React.Dispatch<React.SetStateAction<Record<string, AIFunction>>>
   executeFunction: (functionName: string, input: string) => Promise<string | undefined>
 }
 
@@ -35,6 +42,7 @@ export default function Sandbox({
 }: SandboxProps) {
   const [isExecuting, setIsExecuting] = useState(false)
   const [showManageFunctions, setShowManageFunctions] = useState(false)
+  const [showClearDialog, setShowClearDialog] = useState(false)
 
   const handleExecute = async () => {
     if (!selectedFunction || !sandboxText.trim()) return
@@ -55,16 +63,9 @@ export default function Sandbox({
     }
   }
 
-  const updateFunction = (key: keyof AIFunction, value: string | number) => {
-    if (selectedFunction) {
-      setFunctions({
-        ...functions,
-        [selectedFunction]: {
-          ...functions[selectedFunction],
-          [key]: value
-        }
-      })
-    }
+  const handleClearSandbox = () => {
+    setSandboxText('')
+    setShowClearDialog(false)
   }
 
   return (
@@ -73,6 +74,68 @@ export default function Sandbox({
         <CardTitle className="text-2xl font-bold text-blue-400">Sandbox</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <Select value={selectedFunction} onValueChange={setSelectedFunction}>
+            <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100 w-full">
+              <SelectValue placeholder="Select function" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(functions).map((funcName) => (
+                <SelectItem key={funcName} value={funcName}>
+                  {funcName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              onClick={handleExecute} 
+              className="bg-purple-600 hover:bg-purple-700 flex-grow"
+              disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
+            >
+              {isExecuting ? 'Executing...' : 'Execute'}
+            </Button>
+            <Button
+              onClick={() => setShowManageFunctions(!showManageFunctions)}
+              className="bg-blue-600 hover:bg-blue-700 flex-grow"
+            >
+              {showManageFunctions ? 'Close Manager' : 'Manage Functions'}
+            </Button>
+            <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-red-600 hover:bg-red-700 flex-grow">
+                  Clear
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-gray-800 text-gray-100">
+                <DialogHeader>
+                  <DialogTitle>Clear Sandbox</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to clear the sandbox? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button onClick={() => setShowClearDialog(false)} className="bg-gray-600 hover:bg-gray-700">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleClearSandbox} className="bg-red-600 hover:bg-red-700">
+                    Clear
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+        
+        {showManageFunctions && (
+          <FunctionManager
+            functions={functions}
+            setFunctions={setFunctions}
+            selectedFunction={selectedFunction}
+            setSelectedFunction={setSelectedFunction}
+          />
+        )}
+        
         <div data-color-mode="dark" className="bg-gray-700 rounded-md overflow-hidden">
           <MDEditor
             value={sandboxText}
@@ -92,88 +155,6 @@ export default function Sandbox({
             style={mdEditorStyles}
           />
         </div>
-        <div className="flex space-x-2">
-          <Select value={selectedFunction} onValueChange={setSelectedFunction} className="flex-grow">
-            <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100">
-              <SelectValue placeholder="Select function" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.keys(functions).map((funcName) => (
-                <SelectItem key={funcName} value={funcName}>
-                  {funcName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button 
-            onClick={handleExecute} 
-            className="bg-purple-600 hover:bg-purple-700"
-            disabled={isExecuting || !selectedFunction}
-          >
-            {isExecuting ? 'Executing...' : 'Execute'}
-          </Button>
-          <Button
-            onClick={() => setShowManageFunctions(!showManageFunctions)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Manage Functions
-          </Button>
-        </div>
-        {showManageFunctions && selectedFunction && (
-          <div className="p-4 space-y-4 border border-gray-600 rounded-md bg-gray-700">
-            <div className="space-y-2">
-              <Label htmlFor="systemPrompt" className="text-white">System Prompt</Label>
-              <Textarea
-                id="systemPrompt"
-                value={functions[selectedFunction].systemPrompt}
-                onChange={(e) => updateFunction('systemPrompt', e.target.value)}
-                className="bg-gray-600 border-gray-500 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="userPrompt" className="text-white">User Prompt</Label>
-              <Textarea
-                id="userPrompt"
-                value={functions[selectedFunction].userPrompt}
-                onChange={(e) => updateFunction('userPrompt', e.target.value)}
-                className="bg-gray-600 border-gray-500 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="temp" className="text-white">Temperature</Label>
-              <Input
-                id="temp"
-                type="number"
-                value={functions[selectedFunction].temp}
-                onChange={(e) => updateFunction('temp', parseFloat(e.target.value))}
-                className="bg-gray-600 border-gray-500 text-white"
-                min="0"
-                max="1"
-                step="0.1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model" className="text-white">Model</Label>
-              <Input
-                id="model"
-                value={functions[selectedFunction].model}
-                onChange={(e) => updateFunction('model', e.target.value)}
-                className="bg-gray-600 border-gray-500 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="maxTokens" className="text-white">Max Tokens</Label>
-              <Input
-                id="maxTokens"
-                type="number"
-                value={functions[selectedFunction].maxTokens}
-                onChange={(e) => updateFunction('maxTokens', parseInt(e.target.value))}
-                className="bg-gray-600 border-gray-500 text-white"
-                min="1"
-              />
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

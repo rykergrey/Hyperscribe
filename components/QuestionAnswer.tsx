@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AIFunction } from '@/lib/functions'
@@ -8,12 +8,13 @@ import remarkGfm from 'remark-gfm'
 
 interface QuestionAnswerProps {
   question: string
-  setQuestion: (question: string) => void
+  setQuestion: React.Dispatch<React.SetStateAction<string>>
   answer: string
-  setAnswer: (answer: string) => void
+  setAnswer: React.Dispatch<React.SetStateAction<string>>
   rawTranscript: string
   functions: Record<string, AIFunction>
   executeFunction: (functionName: string, input: string) => Promise<string | undefined>
+  appendToSandbox: (text: string) => void
 }
 
 export default function QuestionAnswer({ 
@@ -23,8 +24,21 @@ export default function QuestionAnswer({
   setAnswer, 
   rawTranscript, 
   functions,
-  executeFunction
+  executeFunction,
+  appendToSandbox
 }: QuestionAnswerProps) {
+  const answerRef = useRef<HTMLDivElement>(null);
+  const [answerHeight, setAnswerHeight] = useState(320); // Default height
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleSendToSandbox = () => {
+    if (answerRef.current) {
+      const selection = window.getSelection();
+      const selectedText = selection?.toString() || '';
+      appendToSandbox(selectedText || answer);
+    }
+  };
+
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false)
   const [showSuggestedQuestions, setShowSuggestedQuestions] = useState(false)
@@ -65,34 +79,72 @@ export default function QuestionAnswer({
     }
   }
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isResizing) return;
+    const newHeight = e.clientY - (answerRef.current?.getBoundingClientRect().top || 0);
+    setAnswerHeight(Math.max(newHeight, 100)); // Minimum height of 100px
+  };
+
+  React.useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove as any);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove as any);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove as any);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex space-x-2">
+        <div className="flex flex-col space-y-2">
           <Input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            className="flex-grow bg-gray-700 border-gray-600 text-gray-100"
+            className="w-full bg-gray-700 border-gray-600 text-gray-100"
             placeholder="Enter your question here..."
           />
-          <Button onClick={handleAskQuestion} className="bg-purple-600 hover:bg-purple-700">
-            Ask Question
-          </Button>
-          <Button 
-            onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)} 
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Suggested Questions
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              onClick={handleAskQuestion} 
+              className="bg-purple-600 hover:bg-purple-700 flex-grow"
+              disabled={!question.trim()}
+            >
+              Ask Question
+            </Button>
+            <Button 
+              onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)} 
+              className="bg-blue-600 hover:bg-blue-700 flex-grow"
+            >
+              Suggested Questions
+            </Button>
+            <Button onClick={handleSendToSandbox} className="bg-orange-600 hover:bg-orange-700 flex-grow">
+              Send to Sandbox
+            </Button>
+          </div>
         </div>
         {showSuggestedQuestions && (
           <div className="p-4 space-y-2 border border-gray-600 rounded-md bg-gray-700">
             <Button 
               onClick={handleGenerateSuggestedQuestions} 
-              className="w-full bg-green-600 hover:bg-green-700 text-white" 
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white" 
               disabled={isGeneratingSuggestions}
             >
               {isGeneratingSuggestions ? 'Generating...' : 'Generate Suggested Questions'}
@@ -108,8 +160,16 @@ export default function QuestionAnswer({
             ))}
           </div>
         )}
-        <div className="w-full min-h-[20rem] p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto">
+        <div 
+          ref={answerRef}
+          className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto"
+          style={{ height: `${answerHeight}px`, resize: 'vertical' }}
+        >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+          <div 
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            onMouseDown={handleMouseDown}
+          />
         </div>
       </CardContent>
     </Card>

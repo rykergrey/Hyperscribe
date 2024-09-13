@@ -1,48 +1,55 @@
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import React, { useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea"; // Add this import
 
 interface RawTranscriptProps {
-  rawTranscript: string
-  setRawTranscript: (value: string) => void
-  setSandboxText: (value: string) => void
+  rawTranscript: string;
+  setRawTranscript: React.Dispatch<React.SetStateAction<string>>;
+  appendToSandbox: (text: string) => void;
 }
 
-const RawTranscript: React.FC<RawTranscriptProps> = ({ rawTranscript, setRawTranscript, setSandboxText }) => {
+function RawTranscript({ rawTranscript, setRawTranscript, appendToSandbox }: RawTranscriptProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(rawTranscript)
-      .then(() => console.log('Text copied to clipboard'))
-      .catch(err => console.error('Failed to copy text: ', err))
-  }
+    navigator.clipboard.writeText(rawTranscript);
+  };
 
   const handleSendToSandbox = () => {
-    setSandboxText(rawTranscript)
-  }
+    if (textareaRef.current) {
+      const selectedText = textareaRef.current.value.substring(
+        textareaRef.current.selectionStart,
+        textareaRef.current.selectionEnd
+      );
+      appendToSandbox(selectedText || rawTranscript);
+    }
+  };
 
   return (
-    <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20 flex flex-col min-h-[400px]">
+    <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-blue-400">Raw Transcript</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col">
+      <CardContent className="space-y-4">
         <Textarea
+          ref={textareaRef}
           value={rawTranscript}
           onChange={(e) => setRawTranscript(e.target.value)}
-          className="w-full min-h-[20rem] p-2 bg-gray-700 border-gray-600 text-gray-100 rounded resize-y font-sans text-sm mb-4"
-          placeholder="Enter raw transcript here..."
+          className="w-full h-[20rem] min-h-[20rem] p-2 bg-gray-700 text-gray-100 border border-gray-600 rounded resize-y"
+          style={{ resize: 'vertical' }}
         />
-        <div className="flex space-x-2">
-          <Button onClick={handleCopy} className="bg-blue-600 hover:bg-blue-700 flex-1">
+        <div className="flex justify-end space-x-2">
+          <Button onClick={handleCopy} className="bg-purple-600 hover:bg-purple-700">
             Copy
           </Button>
-          <Button onClick={handleSendToSandbox} className="bg-purple-600 hover:bg-purple-700 flex-1">
+          <Button onClick={handleSendToSandbox} className="bg-orange-600 hover:bg-orange-700">
             Send to Sandbox
           </Button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-export default RawTranscript
+export default RawTranscript;
