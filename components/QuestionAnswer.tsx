@@ -1,18 +1,17 @@
 import React, { useRef, useState, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AIFunction } from '@/lib/functions'
 import { Input } from "@/components/ui/input"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-interface QuestionAnswerProps {
+export interface QuestionAnswerProps {
   question: string
   setQuestion: React.Dispatch<React.SetStateAction<string>>
   answer: string
   setAnswer: React.Dispatch<React.SetStateAction<string>>
   rawTranscript: string
-  functions: Record<string, AIFunction>
+  // Remove functions from here if it's not used
   executeFunction: (functionName: string, input: string) => Promise<string | undefined>
   appendToSandbox: (text: string) => void
 }
@@ -23,7 +22,7 @@ export default function QuestionAnswer({
   answer, 
   setAnswer, 
   rawTranscript, 
-  functions,
+  // Remove functions from here if it's not used
   executeFunction,
   appendToSandbox
 }: QuestionAnswerProps) {

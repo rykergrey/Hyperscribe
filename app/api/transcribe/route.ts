@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ffmpeg from 'fluent-ffmpeg';
-import fetch from 'node-fetch';
-import FormData from 'form-data';
 import { join } from 'path';
-import os from 'os';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { decode } from 'html-entities';
 

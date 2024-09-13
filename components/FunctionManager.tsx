@@ -59,10 +59,6 @@ export const FunctionManager: React.FC<FunctionManagerProps> = ({
     setIsDeleteDialogOpen(false)
   }
 
-  const handleSaveChanges = () => {
-    setIsDialogOpen(true)
-  }
-
   return (
     <div className="space-y-4 bg-gray-700 p-4 rounded-md">
       <div className="space-y-4">

@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         model: 'whisper-1'
       })
 
-      res.status(200).json({ transcript: response.data.text })
+      res.status(200).json({ transcript: response.text })
     } catch (error) {
       console.error('Error transcribing audio:', error)
       res.status(500).json({ error: 'Error transcribing audio' })

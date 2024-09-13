@@ -4,17 +4,17 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
-interface SessionManagerProps {
+export interface SessionManagerProps {
   session: string
   setSession: (session: string) => void
   sessions: string[]
-  setSessions: (sessions: string[]) => void
+  // Remove setSessions if it's not used
   onSaveSession: (sessionName: string) => void
   onLoadSession: (sessionName: string) => void
   onDeleteSession: (sessionName: string) => void
 }
 
-export function SessionManager({ session, setSession, sessions, setSessions, onSaveSession, onLoadSession, onDeleteSession }: SessionManagerProps) {
+export function SessionManager({ session, setSession, sessions, onSaveSession, onLoadSession, onDeleteSession }: SessionManagerProps) {
   const [newSessionName, setNewSessionName] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 

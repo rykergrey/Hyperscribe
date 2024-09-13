@@ -7,14 +7,18 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { defaultFunctions, AIFunction } from '@/lib/functions'
 import { saveSession, loadSession, getSessionNames, Session } from '@/lib/sessionManager'
-import { SessionManager } from './SessionManager'
 import { executeFunction } from '@/lib/executeFunction'
 
-// Dynamically import components that aren't immediately necessary
+// Import types
+import type { QuestionAnswerProps } from './QuestionAnswer'
+import type { SessionManagerProps } from './SessionManager'
+
+// Dynamically import components
 const RawTranscript = dynamic(() => import('./RawTranscript'))
 const Summary = dynamic(() => import('./Summary'))
-const QuestionAnswer = dynamic(() => import('./QuestionAnswer'))
+const QuestionAnswer = dynamic<QuestionAnswerProps>(() => import('./QuestionAnswer').then(mod => mod.default))
 const Sandbox = dynamic(() => import('./Sandbox'))
+const SessionManager = dynamic<SessionManagerProps>(() => import('./SessionManager').then(mod => mod.SessionManager))
 
 export default function Hyperscribe() {
   const [youtubeUrl, setYoutubeUrl] = useState<string>('')
@@ -211,7 +215,6 @@ export default function Hyperscribe() {
                   session={session}
                   setSession={setSession}
                   sessions={sessions}
-                  setSessions={setSessions}
                   onSaveSession={handleSaveSession}
                   onLoadSession={handleLoadSession}
                   onDeleteSession={handleDeleteSession}
@@ -233,7 +236,6 @@ export default function Hyperscribe() {
                 answer={answer}
                 setAnswer={setAnswer}
                 rawTranscript={rawTranscript}
-                functions={functions}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
               />
@@ -244,7 +246,6 @@ export default function Hyperscribe() {
                 summary={summary}
                 setSummary={setSummary}
                 rawTranscript={rawTranscript}
-                functions={functions}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
               />
