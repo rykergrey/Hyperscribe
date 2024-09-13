@@ -154,7 +154,7 @@ export const FunctionManager: React.FC<FunctionManagerProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Function</DialogTitle>
           </DialogHeader>
-          <p>Are you sure you want to delete the function "{selectedFunction}"? This action cannot be undone.</p>
+          <p>Are you sure you want to delete the function &quot;{selectedFunction}&quot;? This action cannot be undone.</p>
           <DialogFooter>
             <Button onClick={() => setIsDeleteDialogOpen(false)} className="bg-gray-600 hover:bg-gray-700 text-white">Cancel</Button>
             <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
