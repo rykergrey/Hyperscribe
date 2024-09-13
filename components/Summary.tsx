@@ -2,20 +2,22 @@ import React, { useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { AIFunction } from '@/lib/functions'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
 interface SummaryProps {
-  summary: string
-  setSummary: React.Dispatch<React.SetStateAction<string>>
-  rawTranscript: string
-  functions: Record<string, AIFunction>
-  executeFunction: (functionName: string, input: string) => Promise<string | undefined>
-  appendToSandbox: (text: string) => void
+  summary: string;
+  setSummary: React.Dispatch<React.SetStateAction<string>>;
+  rawTranscript: string;
+  executeFunction: (functionName: string, input: string) => Promise<string | undefined>;
+  appendToSandbox: (text: string) => void;
 }
 
-export default function Summary({ summary, setSummary, rawTranscript, functions, executeFunction, appendToSandbox }: SummaryProps) {
+export default function Summary({ 
+  summary, 
+  setSummary, 
+  rawTranscript, 
+  executeFunction,
+  appendToSandbox
+}: SummaryProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleGenerateSummary = async (functionName: string) => {
