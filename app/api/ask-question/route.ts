@@ -1,13 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function POST(req: Request) {
+interface AIFunction {
+  userPrompt: string;
+  systemPrompt: string;
+  model: string;
+  temp: number;
+  maxTokens: number;
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const { question, context, function: aiFunction } = await req.json();
+    const { question, context, function: aiFunction }: { question: string; context: string; function: AIFunction } = await req.json();
 
     const userPrompt = aiFunction.userPrompt
       .replace('{{context}}', context)
