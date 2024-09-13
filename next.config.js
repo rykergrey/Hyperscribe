@@ -11,13 +11,33 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['fluent-ffmpeg', 'youtube-transcript'],
+    serverComponentsExternalPackages: ['youtube-transcript'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push('fluent-ffmpeg', 'youtube-transcript');
+      config.externals.push('youtube-transcript');
     }
+    // Add WASM support
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
     return config;
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+        ],
+      },
+    ];
   },
 };
 

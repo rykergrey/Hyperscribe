@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ffmpeg from 'fluent-ffmpeg';
-import { join } from 'path';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { decode } from 'html-entities';
-
-// Set the FFmpeg path to the local executable
-ffmpeg.setFfmpegPath(join(process.cwd(), 'ffmpeg.exe'));
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -26,7 +23,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to process YouTube transcript' }, { status: 500 });
     }
   } else if (file) {
-    // Existing audio file processing code...
+    try {
+      const ffmpeg = new FFmpeg();
+
+      // Load FFmpeg
+      await ffmpeg.load({
+        coreURL: await toBlobURL('/ffmpeg-core.js', 'text/javascript'),
+        wasmURL: await toBlobURL('/ffmpeg-core.wasm', 'application/wasm'),
+      });
+
+      // Write the input file to FFmpeg's virtual file system
+      await ffmpeg.writeFile('input.mp3', await fetchFile(file));
+
+      // Run FFmpeg command to convert audio to WAV
+      await ffmpeg.exec(['-i', 'input.mp3', 'output.wav']);
+
+      // Read the output file
+      const data = await ffmpeg.readFile('output.wav');
+
+      // Convert the output to a Blob
+      const wavBlob = new Blob([data], { type: 'audio/wav' });
+
+      // Here you would typically send this WAV file to a speech-to-text service
+      // For this example, we'll just return a dummy transcript
+      const transcript = "This is a dummy transcript. Implement actual speech-to-text here.";
+
+      await ffmpeg.terminate();
+
+      return NextResponse.json({ transcript });
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      return NextResponse.json({ error: 'Error processing audio' }, { status: 500 });
+    }
   } else {
     return NextResponse.json({ error: 'No file or YouTube URL provided' }, { status: 400 });
   }
