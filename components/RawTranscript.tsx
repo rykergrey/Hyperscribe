@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea"; // Add this import
+import { Textarea } from "@/components/ui/textarea";
 
 interface RawTranscriptProps {
   rawTranscript: string;
@@ -11,6 +11,14 @@ interface RawTranscriptProps {
 
 function RawTranscript({ rawTranscript, setRawTranscript, appendToSandbox }: RawTranscriptProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    // Decode HTML entities when rawTranscript changes
+    const decodedTranscript = decodeHTMLEntities(rawTranscript);
+    if (decodedTranscript !== rawTranscript) {
+      setRawTranscript(decodedTranscript);
+    }
+  }, [rawTranscript, setRawTranscript]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(rawTranscript);
@@ -26,6 +34,13 @@ function RawTranscript({ rawTranscript, setRawTranscript, appendToSandbox }: Raw
     }
   };
 
+  // Function to decode HTML entities
+  const decodeHTMLEntities = (text: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
+  };
+
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
       <CardHeader>
@@ -37,7 +52,7 @@ function RawTranscript({ rawTranscript, setRawTranscript, appendToSandbox }: Raw
           value={rawTranscript}
           onChange={(e) => setRawTranscript(e.target.value)}
           className="w-full h-[20rem] min-h-[20rem] p-2 bg-gray-700 text-gray-100 border border-gray-600 rounded resize-y"
-          style={{ resize: 'vertical' }}
+          style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
         <div className="flex justify-end space-x-2">
           <Button onClick={handleCopy} className="bg-purple-600 hover:bg-purple-700">

@@ -29,6 +29,7 @@ interface SandboxProps {
   functions: Record<string, AIFunction>
   setFunctions: React.Dispatch<React.SetStateAction<Record<string, AIFunction>>>
   executeFunction: (functionName: string, input: string) => Promise<string | undefined>
+  showManageFunctionsButton: boolean // Add this new prop
 }
 
 export default function Sandbox({
@@ -38,7 +39,8 @@ export default function Sandbox({
   setSelectedFunction,
   functions,
   setFunctions,
-  executeFunction
+  executeFunction,
+  showManageFunctionsButton = false, // Add this new prop with a default value
 }: SandboxProps) {
   const [isExecuting, setIsExecuting] = useState(false)
   const [showManageFunctions, setShowManageFunctions] = useState(false)
@@ -95,12 +97,14 @@ export default function Sandbox({
             >
               {isExecuting ? 'Executing...' : 'Execute'}
             </Button>
-            <Button
-              onClick={() => setShowManageFunctions(!showManageFunctions)}
-              className="bg-blue-600 hover:bg-blue-700 flex-grow"
-            >
-              {showManageFunctions ? 'Close Manager' : 'Manage Functions'}
-            </Button>
+            {showManageFunctionsButton && (
+              <Button
+                onClick={() => setShowManageFunctions(!showManageFunctions)}
+                className="bg-blue-600 hover:bg-blue-700 flex-grow"
+              >
+                {showManageFunctions ? 'Close Manager' : 'Manage Functions'}
+              </Button>
+            )}
             <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
               <DialogTrigger asChild>
                 <Button className="bg-red-600 hover:bg-red-700 flex-grow">

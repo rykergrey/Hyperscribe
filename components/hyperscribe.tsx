@@ -70,7 +70,7 @@ export default function Hyperscribe() {
       const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
       if (!response.ok) throw new Error('Failed to transcribe audio')
       const data = await response.json()
-      setRawTranscript(data.transcript)
+      setRawTranscript(decodeHTMLEntities(data.transcript))
     } catch (error) {
       console.error('Error transcribing audio:', error)
     } finally {
@@ -87,7 +87,7 @@ export default function Hyperscribe() {
       const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
       if (!response.ok) throw new Error('Failed to process YouTube video')
       const data = await response.json()
-      setRawTranscript(data.transcript)
+      setRawTranscript(decodeHTMLEntities(data.transcript))
     } catch (error) {
       console.error('Error processing YouTube video:', error)
     } finally {
@@ -148,6 +148,13 @@ export default function Hyperscribe() {
 
   const appendToSandbox = (text: string) => {
     setSandboxText(prevText => prevText + (prevText ? '\n\n' : '') + text);
+  };
+
+  // Function to decode HTML entities
+  const decodeHTMLEntities = (text: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
   };
 
   return (
