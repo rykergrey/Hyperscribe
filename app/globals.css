@@ -3,35 +3,108 @@
 @tailwind utilities;
 
 .bg-gradient-animation {
-  background: linear-gradient(
-    -45deg,
-    #a40000,  /* Dark Purple */
-    #000000,  /* Very Dark Purple */
-    #690076,  /* Dark Purple */
-    #001e57,
-    #000000,  /* Very Dark Purple */
-    #940449  /* Very Dark Purple */
-  );
+  background: linear-gradient(-45deg,
+      #a40000,
+      /* Dark Purple */
+      #000000,
+      /* Very Dark Purple */
+      #690076,
+      /* Dark Purple */
+      #001e57,
+      #000000,
+      /* Very Dark Purple */
+      #940449
+      /* Very Dark Purple */
+    );
   background-size: 100% 500%;
   animation: gradientRandom 500s ease infinite;
 }
 
 @keyframes gradientRandom {
-  0% { background-position: 0% 50%; }
-  20% { background-position: 100% 20%; }
-  40% { background-position: 60% 100%; }
-  60% { background-position: 20% 0%; }
-  80% { background-position: 80% 70%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  20% {
+    background-position: 100% 20%;
+  }
+
+  40% {
+    background-position: 60% 100%;
+  }
+
+  60% {
+    background-position: 20% 0%;
+  }
+
+  80% {
+    background-position: 80% 70%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes color-shift {
-  0%, 100% { --gradient-color: #4C1D95; } /* Purple */
-  20% { --gradient-color: #7C3AED; } /* Light Purple */
-  40% { --gradient-color: #C026D3; } /* Pink */
-  60% { --gradient-color: #DB2777; } /* Dark Pink */
-  80% { --gradient-color: #E11D48; } /* Red */
-  90% { --gradient-color: #F97316; } /* Orange */
+
+  0%,
+  100% {
+    --gradient-color: #4C1D95;
+  }
+
+  /* Purple */
+  20% {
+    --gradient-color: #7C3AED;
+  }
+
+  /* Light Purple */
+  40% {
+    --gradient-color: #C026D3;
+  }
+
+  /* Pink */
+  60% {
+    --gradient-color: #DB2777;
+  }
+
+  /* Dark Pink */
+  80% {
+    --gradient-color: #E11D48;
+  }
+
+  /* Red */
+  90% {
+    --gradient-color: #F97316;
+  }
+
+  /* Orange */
+}
+
+.tooltip {
+  position: relative;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
 }
 
 @layer base {
@@ -57,7 +130,7 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -85,6 +158,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -137,4 +211,45 @@
   right: 0;
   bottom: 0;
   overflow: hidden;
+}
+
+/* Add this to your existing global CSS */
+.markdown-content h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content hr {
+  border: 0;
+  border-top: 1px solid #ccc;
+  margin: 1em 0;
 }

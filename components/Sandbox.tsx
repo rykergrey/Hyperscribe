@@ -83,6 +83,12 @@ export default function Sandbox({
     setShowClearDialog(false);
   };
 
+  const copyContent = () => {
+    navigator.clipboard.writeText(sandboxText)
+      .then(() => alert("Content copied to clipboard!"))
+      .catch(err => console.error('Failed to copy: ', err));
+  };
+
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
       <CardHeader>
@@ -120,6 +126,12 @@ export default function Sandbox({
                 {showManageFunctions ? "Close Manager" : "Manage Functions"}
               </Button>
             )}
+            <Button
+              onClick={copyContent}
+              className="bg-green-600 hover:bg-green-700 flex-grow"
+            >
+              Copy
+            </Button>
             <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
               <DialogTrigger asChild>
                 <Button className="bg-red-600 hover:bg-red-700 flex-grow">
@@ -169,10 +181,10 @@ export default function Sandbox({
           <MDEditor
             value={sandboxText}
             onChange={(value) => setSandboxText(value || "")}
-            preview="edit"
+            preview="preview"
             className="!bg-gray-700"
             textareaProps={{
-              placeholder: "Enter text here...",
+              placeholder: "Send text here...",
               className: "!bg-gray-700 !text-gray-100",
             }}
             previewOptions={{

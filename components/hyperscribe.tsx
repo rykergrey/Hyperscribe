@@ -115,7 +115,9 @@ export default function Hyperscribe() {
     if (!functions[functionName]) return;
     try {
       const result = await executeFunction(functions[functionName], input);
-      return result;
+      if (result) {
+        return `# ${functionName}\n\n${result}`;
+      }
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
     }
@@ -200,7 +202,7 @@ export default function Hyperscribe() {
             <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-blue-400">
-                  Data Source
+                  Information Source
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -225,7 +227,7 @@ export default function Hyperscribe() {
                 <div className="flex items-center space-x-4">
                   <div className="flex-grow">
                     <Input
-                      placeholder="Enter YouTube URL  |  Audio file uploading coming soon!"
+                      placeholder="Paste YouTube URL Here"
                       value={youtubeUrl}
                       onChange={(e) => setYoutubeUrl(e.target.value)}
                       className="w-full bg-gray-700 border-gray-600 text-gray-100"
@@ -236,7 +238,7 @@ export default function Hyperscribe() {
                     className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
                     disabled={!youtubeUrl || isTranscribing}
                   >
-                    Get Transcript
+                    Process YouTube Video
                   </Button>
                 </div>
                 {/* Commented out audio transcription elements

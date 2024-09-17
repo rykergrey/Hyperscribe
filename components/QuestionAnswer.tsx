@@ -51,15 +51,19 @@ export default function QuestionAnswer({
       const input = `Context: ${rawTranscript}\n\nQuestion: ${question}`;
       const result = await executeFunction("Answer Question", input);
       if (result) {
-        setAnswer(result);
+        // Remove the function name header if it exists
+        const newAnswer = result.replace(/^# Answer Question\n\n/, '');
+        // Create a new entry with the question and answer
+        const newEntry = `## ${question}\n\n${newAnswer}\n\n---\n\n`;
+        // Prepend the new entry to the existing answer
+        setAnswer(prevAnswer => newEntry + prevAnswer);
       }
     } catch (error) {
       console.error("Error asking question:", error);
-      setAnswer(
-        "An error occurred while processing your question. Please try again.",
-      );
+      setAnswer(prevAnswer => `Error: An error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`);
     } finally {
       setIsAsking(false);
+      setQuestion(''); // Clear the question input after asking
     }
   };
 
@@ -73,7 +77,14 @@ export default function QuestionAnswer({
       );
       console.log("Result:", result);
       if (result) {
-        const questions = result.split("\n").filter((q) => q.trim());
+        // Remove the function name header if it exists and parse questions
+        const questionsWithoutHeader = result.replace(
+          /^# Generate Suggested Questions\n\n/,
+          "",
+        );
+        const questions = questionsWithoutHeader
+          .split("\n")
+          .filter((q) => q.trim());
         console.log("Parsed questions:", questions);
         setSuggestedQuestions(questions);
       } else {
@@ -125,6 +136,13 @@ export default function QuestionAnswer({
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(answer)
+      .then(() => alert("Content copied to clipboard!"))
+      .catch((err) => console.error("Failed to copy: ", err));
+  };
+
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
       <CardHeader>
@@ -153,10 +171,19 @@ export default function QuestionAnswer({
               Suggested Questions
             </Button>
             <Button
+              onClick={handleCopy}
+              className="bg-green-600 hover:bg-green-700 flex-grow"
+            >
+              Copy
+            </Button>
+            <Button
               onClick={handleSendToSandbox}
-              className="bg-orange-600 hover:bg-orange-700 flex-grow"
+              className="bg-orange-600 hover:bg-orange-700 flex-grow relative group"
             >
               Send to Sandbox
+              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Highlight text to send only that selection
+              </span>
             </Button>
           </div>
         </div>
@@ -184,14 +211,45 @@ export default function QuestionAnswer({
         )}
         <div
           ref={answerRef}
-          className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto"
+          className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content"
           style={{ height: `${answerHeight}px`, resize: "vertical" }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
-          <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
-            onMouseDown={handleMouseDown}
-          />
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-3 mb-2" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-2 mb-1" {...props} />,
+              p: ({node, ...props}) => <p className="mb-2" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2" {...props} />,
+              li: ({node, ...props}) => <li className="ml-4" {...props} />,
+              a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
+              blockquote: ({node, ...props}) => (
+                <blockquote className="border-l-4 border-gray-500 pl-4 italic my-2" {...props} />
+              ),
+              code({node, inline, className, children, ...props}) {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={dracula}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+              hr: ({node, ...props}) => <hr className="my-4 border-t border-gray-600" {...props} />
+            }}
+          >
+            {answer}
+          </ReactMarkdown>
         </div>
       </CardContent>
     </Card>
