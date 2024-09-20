@@ -1,37 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultFunctions, AIFunction } from "@/lib/functions";
-import {
-  saveSession,
-  loadSession,
-  getSessionNames,
-  Session,
-} from "@/lib/sessionManager";
 import { executeFunction } from "@/lib/executeFunction";
 
-// Import types
-import type { QuestionAnswerProps } from "./QuestionAnswer";
-import type { SessionManagerProps } from "./SessionManager";
-
-// Dynamically import components
-const RawTranscript = dynamic(() => import("./RawTranscript"));
-const Summary = dynamic(() => import("./Summary"));
-const QuestionAnswer = dynamic<QuestionAnswerProps>(() =>
-  import("./QuestionAnswer").then((mod) => mod.default),
-);
-const Sandbox = dynamic(() => import("./Sandbox"));
-const SessionManager = dynamic<SessionManagerProps>(() =>
-  import("./SessionManager").then((mod) => mod.SessionManager),
-);
+// Import components statically
+import RawTranscript from "./RawTranscript";
+import Summary from "./Summary";
+import QuestionAnswer from "./QuestionAnswer";
+import Sandbox from "./Sandbox";
 
 export default function Hyperscribe() {
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
-  const [session, setSession] = useState("");
   const [rawTranscript, setRawTranscript] = useState("");
   const [summary, setSummary] = useState("");
   const [question, setQuestion] = useState("");
@@ -42,9 +25,7 @@ export default function Hyperscribe() {
     useState<Record<string, AIFunction>>(defaultFunctions);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  const [sessions, setSessions] = useState<string[]>([]);
-
-  const [file, setFile] = useState<File | null>(null);
+  const [expandedComponent, setExpandedComponent] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -62,34 +43,18 @@ export default function Hyperscribe() {
     };
 
     fetchFunctions();
-    setSessions(getSessionNames());
   }, []);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0]);
+  useEffect(() => {
+    if (expandedComponent) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-  };
-
-  const handleTranscribeAudio = async () => {
-    if (!file) return;
-    setIsTranscribing(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Failed to transcribe audio");
-      const data = await response.json();
-      setRawTranscript(decodeHTMLEntities(data.transcript));
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [expandedComponent]);
 
   const handleProcessYouTube = async () => {
     if (!youtubeUrl) return;
@@ -120,47 +85,6 @@ export default function Hyperscribe() {
       }
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
-    }
-  };
-
-  const handleSaveSession = (sessionName: string) => {
-    const newSession: Session = {
-      name: sessionName,
-      youtubeUrl,
-      rawTranscript,
-      sandboxText,
-      summary,
-      question,
-      answer,
-    };
-    saveSession(newSession);
-    setSessions(getSessionNames());
-  };
-
-  const handleLoadSession = (sessionName: string) => {
-    const loadedSession = loadSession(sessionName);
-    if (loadedSession) {
-      setSession(sessionName);
-      setYoutubeUrl(loadedSession.youtubeUrl);
-      setRawTranscript(loadedSession.rawTranscript);
-      setSandboxText(loadedSession.sandboxText);
-      setSummary(loadedSession.summary);
-      setQuestion(loadedSession.question);
-      setAnswer(loadedSession.answer);
-    }
-  };
-
-  const handleDeleteSession = (sessionName: string) => {
-    const updatedSessions = sessions.filter((s) => s !== sessionName);
-    setSessions(updatedSessions);
-    if (session === sessionName) {
-      setSession("");
-      setYoutubeUrl("");
-      setRawTranscript("");
-      setSandboxText("");
-      setSummary("");
-      setQuestion("");
-      setAnswer("");
     }
   };
 
@@ -261,7 +185,7 @@ export default function Hyperscribe() {
                     >
                       Retrieve Transcript
                     </Button>
-                    
+
 
                     <Button
                       onClick={handleProcessYouTubeComments}
@@ -270,36 +194,10 @@ export default function Hyperscribe() {
                     >
                       Retrieve Comments
                     </Button>
-                    
+
 
                   </div>
                 </div>
-                {/* Commented out audio transcription elements
-                <div className="flex items-center space-x-4">
-                  <div className="flex-grow">
-                    <Input 
-                      type="file" 
-                      onChange={handleFileChange} 
-                      className="w-full bg-gray-700 border-gray-600 text-gray-100" 
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleTranscribeAudio} 
-                    className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
-                    disabled={!file || isTranscribing}
-                  >
-                    {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
-                  </Button>
-                </div>
-                <SessionManager 
-                  session={session}
-                  setSession={setSession}
-                  sessions={sessions}
-                  onSaveSession={handleSaveSession}
-                  onLoadSession={handleLoadSession}
-                  onDeleteSession={handleDeleteSession}
-                />
-                */}
               </CardContent>
             </Card>
           </div>
@@ -310,6 +208,8 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 setRawTranscript={setRawTranscript}
                 appendToSandbox={appendToSandbox}
+                isExpanded={expandedComponent === 'rawTranscript'}
+                onExpand={() => setExpandedComponent(expandedComponent === 'rawTranscript' ? null : 'rawTranscript')}
               />
               <QuestionAnswer
                 question={question}
@@ -319,6 +219,8 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
+                isExpanded={expandedComponent === 'questionAnswer'}
+                onExpand={() => setExpandedComponent(expandedComponent === 'questionAnswer' ? null : 'questionAnswer')}
               />
             </div>
 
@@ -329,6 +231,8 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
+                isExpanded={expandedComponent === 'summary'}
+                onExpand={() => setExpandedComponent(expandedComponent === 'summary' ? null : 'summary')}
               />
               <Sandbox
                 sandboxText={sandboxText}
@@ -338,6 +242,9 @@ export default function Hyperscribe() {
                 functions={functions}
                 setFunctions={setFunctions}
                 executeFunction={handleExecuteFunction}
+                showManageFunctionsButton={true}
+                isExpanded={expandedComponent === 'sandbox'}
+                onExpand={() => setExpandedComponent(expandedComponent === 'sandbox' ? null : 'sandbox')}
               />
             </div>
           </div>

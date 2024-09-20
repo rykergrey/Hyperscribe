@@ -70,8 +70,14 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
   try {
     const transcript = await YoutubeTranscript.fetchTranscript(videoId);
     const decodedTranscript = transcript
-      .map(entry => decode(entry.text))
-      .join('\n');
+      .map((entry, index) => {
+        const decodedText = decode(entry.text);
+        // Add a line break every 10 entries
+        return (index + 1) % 10 === 0 ? decodedText + '\n\n' : decodedText + ' ';
+      })
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
     return decodedTranscript;
   } catch (error) {
     console.error('Error fetching YouTube transcript:', error);
