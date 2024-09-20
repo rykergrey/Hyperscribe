@@ -168,6 +168,44 @@ export default function Hyperscribe() {
     setSandboxText((prevText) => prevText + (prevText ? "\n\n" : "") + text);
   };
 
+  const [isProcessingComments, setIsProcessingComments] = useState(false);
+
+  const handleProcessYouTubeComments = async () => {
+    if (!youtubeUrl) return;
+    setIsProcessingComments(true);
+    try {
+      const videoId = extractVideoId(youtubeUrl);
+      if (!videoId) {
+        throw new Error("Invalid YouTube URL");
+      }
+      const response = await fetch("/api/youtube-comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ videoId }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to process YouTube comments: ${errorData.error}. Details: ${errorData.details}`);
+      }
+      const data = await response.json();
+      setRawTranscript(decodeHTMLEntities(data.comments));
+    } catch (error) {
+      console.error("Error processing YouTube comments:", error);
+      // Display error to user
+      alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsProcessingComments(false);
+    }
+  };
+
+  const extractVideoId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   // Function to decode HTML entities
   const decodeHTMLEntities = (text: string) => {
     const textArea = document.createElement("textarea");
@@ -206,6 +244,36 @@ export default function Hyperscribe() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                  <div className="w-full sm:flex-grow">
+                    <Input
+                      placeholder="YouTube URL Here"
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100"
+                    />
+                  </div>
+                  <div className="flex w-full sm:w-auto space-x-4">
+                    <Button
+                      onClick={handleProcessYouTube}
+                      className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
+                      disabled={!youtubeUrl || isTranscribing}
+                    >
+                      Retrieve Transcript
+                    </Button>
+                    
+
+                    <Button
+                      onClick={handleProcessYouTubeComments}
+                      className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
+                      disabled={!youtubeUrl || isProcessingComments}
+                    >
+                      Retrieve Comments
+                    </Button>
+                    
+
+                  </div>
+                </div>
                 {/* Commented out audio transcription elements
                 <div className="flex items-center space-x-4">
                   <div className="flex-grow">
@@ -223,25 +291,6 @@ export default function Hyperscribe() {
                     {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
                   </Button>
                 </div>
-                */}
-                <div className="flex items-center space-x-4">
-                  <div className="flex-grow">
-                    <Input
-                      placeholder="Paste YouTube URL Here"
-                      value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      className="w-full bg-gray-700 border-gray-600 text-gray-100"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleProcessYouTube}
-                    className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap"
-                    disabled={!youtubeUrl || isTranscribing}
-                  >
-                    Process YouTube Video
-                  </Button>
-                </div>
-                {/* Commented out audio transcription elements
                 <SessionManager 
                   session={session}
                   setSession={setSession}
@@ -250,7 +299,7 @@ export default function Hyperscribe() {
                   onLoadSession={handleLoadSession}
                   onDeleteSession={handleDeleteSession}
                 />
-                 */}
+                */}
               </CardContent>
             </Card>
           </div>

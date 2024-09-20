@@ -16,7 +16,7 @@ HYPERSCRIBE.AI is a simplified version of Ryker Grey's personal AIP (Advanced In
 ## Operation
 
 2. Input a YouTube URL.
-3. Click the "Process" button to retrieve the transcript.
+3. Click the "Retrieve Transcript" or "Retrieve Comments" buttons to retrieve the data.
 5. Utilize components such as summary generation, Q&A, or sandbox function processing.
 
 ## Components

@@ -1,4 +1,7 @@
 import dotenv from 'dotenv';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 dotenv.config();
 
@@ -11,11 +14,20 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['youtube-transcript'],
+    serverComponentsExternalPackages: ['youtube-transcript', 'googleapis'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('youtube-transcript');
+    } else {
+      // This is for client-side
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: require.resolve('crypto-browserify'),
+      };
     }
     // Add WASM support
     config.experiments = { ...config.experiments, asyncWebAssembly: true };

@@ -56,6 +56,7 @@ export default function Sandbox({
   const [isExecuting, setIsExecuting] = useState(false);
   const [showManageFunctions, setShowManageFunctions] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const handleExecute = async () => {
     if (!selectedFunction || !sandboxText.trim()) return;
@@ -85,16 +86,29 @@ export default function Sandbox({
 
   const copyContent = () => {
     navigator.clipboard.writeText(sandboxText)
-      .then(() => alert("Content copied to clipboard!"))
+      .then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+      })
       .catch(err => console.error('Failed to copy: ', err));
   };
 
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl font-bold text-blue-400">
           Sandbox
         </CardTitle>
+        <Button
+          onClick={copyContent}
+          className={`transition-colors ${
+            isCopied 
+              ? "bg-blue-500 hover:bg-blue-600" 
+              : "bg-green-600 hover:bg-green-700"
+          }`}
+        >
+          {isCopied ? "Copied!" : "Copy"}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col space-y-2">
@@ -126,12 +140,6 @@ export default function Sandbox({
                 {showManageFunctions ? "Close Manager" : "Manage Functions"}
               </Button>
             )}
-            <Button
-              onClick={copyContent}
-              className="bg-green-600 hover:bg-green-700 flex-grow"
-            >
-              Copy
-            </Button>
             <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
               <DialogTrigger asChild>
                 <Button className="bg-red-600 hover:bg-red-700 flex-grow">

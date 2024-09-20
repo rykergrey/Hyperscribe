@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export interface QuestionAnswerProps {
   question: string;
@@ -31,6 +33,7 @@ export default function QuestionAnswer({
   const [answerHeight, setAnswerHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const handleSendToSandbox = () => {
     if (answerRef.current) {
@@ -51,11 +54,8 @@ export default function QuestionAnswer({
       const input = `Context: ${rawTranscript}\n\nQuestion: ${question}`;
       const result = await executeFunction("Answer Question", input);
       if (result) {
-        // Remove the function name header if it exists
         const newAnswer = result.replace(/^# Answer Question\n\n/, '');
-        // Create a new entry with the question and answer
         const newEntry = `## ${question}\n\n${newAnswer}\n\n---\n\n`;
-        // Prepend the new entry to the existing answer
         setAnswer(prevAnswer => newEntry + prevAnswer);
       }
     } catch (error) {
@@ -63,7 +63,7 @@ export default function QuestionAnswer({
       setAnswer(prevAnswer => `Error: An error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`);
     } finally {
       setIsAsking(false);
-      setQuestion(''); // Clear the question input after asking
+      setQuestion('');
     }
   };
 
@@ -77,7 +77,6 @@ export default function QuestionAnswer({
       );
       console.log("Result:", result);
       if (result) {
-        // Remove the function name header if it exists and parse questions
         const questionsWithoutHeader = result.replace(
           /^# Generate Suggested Questions\n\n/,
           "",
@@ -137,16 +136,28 @@ export default function QuestionAnswer({
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const handleCopy = () => {
-    navigator.clipboard
-      .writeText(answer)
-      .then(() => alert("Content copied to clipboard!"))
-      .catch((err) => console.error("Failed to copy: ", err));
+    navigator.clipboard.writeText(answer)
+      .then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      })
+      .catch(err => console.error('Failed to copy: ', err));
   };
 
   return (
     <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
+        <Button
+          onClick={handleCopy}
+          className={`transition-colors ${
+            isCopied 
+              ? "bg-blue-500 hover:bg-blue-600" 
+              : "bg-green-600 hover:bg-green-700"
+          }`}
+        >
+          {isCopied ? "Copied!" : "Copy"}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col space-y-2">
@@ -166,24 +177,20 @@ export default function QuestionAnswer({
             </Button>
             <Button
               onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)}
-              className="bg-blue-600 hover:bg-blue-700 flex-grow"
+              className="bg-pink-600 hover:bg-pink-700 flex-grow"
             >
               Suggested Questions
             </Button>
             <Button
-              onClick={handleCopy}
-              className="bg-green-600 hover:bg-green-700 flex-grow"
-            >
-              Copy
-            </Button>
-            <Button
               onClick={handleSendToSandbox}
-              className="bg-orange-600 hover:bg-orange-700 flex-grow relative group"
+              className="bg-orange-600 hover:bg-orange-700 flex-grow relative isolate group"
             >
-              Send to Sandbox
-              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                Highlight text to send only that selection
+              <span className="pointer-events-none absolute inset-x-0 bottom-full mb-2 flex items-center justify-center">
+                <span className="bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                  Highlight text to send only that selection
+                </span>
               </span>
+              Send to Sandbox
             </Button>
           </div>
         </div>
@@ -191,7 +198,7 @@ export default function QuestionAnswer({
           <div className="p-4 space-y-2 border border-gray-600 rounded-md bg-gray-700">
             <Button
               onClick={handleGenerateSuggestedQuestions}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               disabled={isGeneratingSuggestions}
             >
               {isGeneratingSuggestions
