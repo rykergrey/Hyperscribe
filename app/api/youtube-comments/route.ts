@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const response = await youtube.commentThreads.list({
       part: ["snippet"],
       videoId: videoId,
-      maxResults: 500, // Adjust this number as needed
+      maxResults: 200, // Adjust this number as needed
     });
 
     const comments =
@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
       console.error("Error stack:", error.stack);
     }
     return NextResponse.json(
-      { error: "Failed to fetch YouTube comments", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Failed to fetch YouTube comments",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }
