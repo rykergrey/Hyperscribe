@@ -54,7 +54,7 @@ export default function RawTranscript({
     }`}>
       <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-transparent z-10">
         <CardTitle className="text-2xl font-bold text-blue-400">
-          Raw Transcript
+          Raw Data
         </CardTitle>
         <div className="flex space-x-2">
           <Button

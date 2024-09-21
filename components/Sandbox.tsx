@@ -20,7 +20,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FaCopy, FaExpand, FaMinus } from 'react-icons/fa';
+import { FaCopy, FaExpand, FaMinus, FaList } from 'react-icons/fa';
+import { SandboxQueue } from "./SandboxQueue";
+import { FaVolumeUp } from 'react-icons/fa';
+import { AudioPlayer } from "./AudioPlayer";
 
 // Custom styles for the MDEditor
 const mdEditorStyles = {
@@ -41,7 +44,9 @@ interface SandboxProps {
     functionName: string,
     input: string,
   ) => Promise<string | undefined>;
-  showManageFunctionsButton: boolean;
+  showManageFunctionsButton?: boolean;
+  isExpanded?: boolean;
+  onExpand?: () => void;
 }
 
 export default function Sandbox({
@@ -61,6 +66,18 @@ export default function Sandbox({
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showSandboxQueue, setShowSandboxQueue] = useState(false);
+  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [voiceId, setVoiceId] = useState("EXAVITQu4vr4xnSDxMaL");
+  const [modelId, setModelId] = useState("eleven_monolingual_v1");
+  const [stability, setStability] = useState(0.5);
+  const [similarityBoost, setSimilarityBoost] = useState(0.75);
+  const [style, setStyle] = useState(0.0);
+  const [speakerBoost, setSpeakerBoost] = useState(true);
+  const [useSpeedup, setUseSpeedup] = useState(0);
+  const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
 
   const handleExecute = async () => {
     if (!selectedFunction || !sandboxText.trim()) return;
@@ -71,7 +88,9 @@ export default function Sandbox({
       const result = await executeFunction(selectedFunction, sandboxText);
       console.log("Result:", result);
       if (result) {
-        setSandboxText(result);
+        // Remove the function name from the result
+        const cleanedResult = result.replace(`# ${selectedFunction}\n\n`, '');
+        setSandboxText(cleanedResult);
       }
     } catch (error) {
       console.error("Error executing function:", error);
@@ -101,6 +120,23 @@ export default function Sandbox({
     setIsMinimized(!isMinimized);
   };
 
+  const handleExecuteQueue = async (functionQueue: string[]) => {
+    let result = sandboxText;
+    for (const funcName of functionQueue) {
+      result = await executeFunction(funcName, result) || result;
+    }
+    setSandboxText(result);
+    setShowSandboxQueue(false);
+  };
+
+  const handleSpeak = () => {
+    setShowAudioPlayer(true);
+  };
+
+  const handleCloseAudioPlayer = () => {
+    setShowAudioPlayer(false);
+  };
+
   return (
     <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
       isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none overflow-auto' : ''
@@ -117,6 +153,12 @@ export default function Sandbox({
             <FaCopy />
           </Button>
           <Button
+            onClick={() => setShowSandboxQueue(!showSandboxQueue)}
+            className="p-2 bg-gray-600 hover:bg-gray-700"
+          >
+            <FaList />
+          </Button>
+          <Button
             onClick={handleMinimize}
             className="p-2 bg-gray-600 hover:bg-gray-700"
           >
@@ -127,6 +169,13 @@ export default function Sandbox({
             className="p-2 bg-gray-600 hover:bg-gray-700"
           >
             <FaExpand />
+          </Button>
+          <Button
+            onClick={handleSpeak}
+            className="p-2 bg-gray-600 hover:bg-gray-700"
+            disabled={isGeneratingSpeech}
+          >
+            <FaVolumeUp />
           </Button>
         </div>
       </CardHeader>
@@ -193,7 +242,7 @@ export default function Sandbox({
               </Dialog>
             </div>
 
-            {showManageFunctions && (
+            {showManageFunctions && showManageFunctionsButton && (
               <FunctionManager
                 functions={functions}
                 setFunctions={setFunctions}
@@ -228,6 +277,19 @@ export default function Sandbox({
           </>
         )}
       </CardContent>
+      {showSandboxQueue && (
+        <SandboxQueue
+          functions={functions}
+          onExecute={handleExecuteQueue}
+          onClose={() => setShowSandboxQueue(false)}
+        />
+      )}
+      {showAudioPlayer && (
+        <AudioPlayer
+          text={sandboxText}
+          onClose={handleCloseAudioPlayer}
+        />
+      )}
     </Card>
   );
 }

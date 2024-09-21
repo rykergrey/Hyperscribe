@@ -242,7 +242,6 @@ export default function Hyperscribe() {
                 functions={functions}
                 setFunctions={setFunctions}
                 executeFunction={handleExecuteFunction}
-                showManageFunctionsButton={true}
                 isExpanded={expandedComponent === 'sandbox'}
                 onExpand={() => setExpandedComponent(expandedComponent === 'sandbox' ? null : 'sandbox')}
               />

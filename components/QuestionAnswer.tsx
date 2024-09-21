@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { FaCopy, FaExpand, FaMinus } from 'react-icons/fa';
+import { FaCopy, FaExpand, FaMinus } from "react-icons/fa";
 
 export interface QuestionAnswerProps {
   question: string;
@@ -39,7 +39,7 @@ export default function QuestionAnswer({
   const [isCopied, setIsCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const defaultHeight = 320;
-  const minimizedHeight = .1; // Height when minimized
+  const minimizedHeight = 0.1; // Height when minimized
 
   const handleSendToSandbox = () => {
     if (answerRef.current) {
@@ -60,16 +60,19 @@ export default function QuestionAnswer({
       const input = `Context: ${rawTranscript}\n\nQuestion: ${question}`;
       const result = await executeFunction("Answer Question", input);
       if (result) {
-        const newAnswer = result.replace(/^# Answer Question\n\n/, '');
+        const newAnswer = result.replace(/^# Answer Question\n\n/, "");
         const newEntry = `## ${question}\n\n${newAnswer}\n\n---\n\n`;
-        setAnswer(prevAnswer => newEntry + prevAnswer);
+        setAnswer((prevAnswer) => newEntry + prevAnswer);
       }
     } catch (error) {
       console.error("Error asking question:", error);
-      setAnswer(prevAnswer => `Error: An error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`);
+      setAnswer(
+        (prevAnswer) =>
+          `Error: An error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`,
+      );
     } finally {
       setIsAsking(false);
-      setQuestion('');
+      setQuestion("");
     }
   };
 
@@ -122,7 +125,7 @@ export default function QuestionAnswer({
   const handleMouseMove = useCallback(
     (e: MouseEvent | TouchEvent) => {
       if (!isResizing) return;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
       const newHeight =
         clientY - (answerRef.current?.getBoundingClientRect().top || 0);
       setAnswerHeight(Math.max(newHeight, minimizedHeight));
@@ -137,31 +140,50 @@ export default function QuestionAnswer({
 
   React.useEffect(() => {
     if (isResizing) {
-      window.addEventListener("mousemove", handleMouseMove as (e: Event) => void);
-      window.addEventListener("touchmove", handleMouseMove as (e: Event) => void);
+      window.addEventListener(
+        "mousemove",
+        handleMouseMove as (e: Event) => void,
+      );
+      window.addEventListener(
+        "touchmove",
+        handleMouseMove as (e: Event) => void,
+      );
       window.addEventListener("mouseup", handleMouseUp);
       window.addEventListener("touchend", handleMouseUp);
     } else {
-      window.removeEventListener("mousemove", handleMouseMove as (e: Event) => void);
-      window.removeEventListener("touchmove", handleMouseMove as (e: Event) => void);
+      window.removeEventListener(
+        "mousemove",
+        handleMouseMove as (e: Event) => void,
+      );
+      window.removeEventListener(
+        "touchmove",
+        handleMouseMove as (e: Event) => void,
+      );
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchend", handleMouseUp);
     }
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove as (e: Event) => void);
-      window.removeEventListener("touchmove", handleMouseMove as (e: Event) => void);
+      window.removeEventListener(
+        "mousemove",
+        handleMouseMove as (e: Event) => void,
+      );
+      window.removeEventListener(
+        "touchmove",
+        handleMouseMove as (e: Event) => void,
+      );
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchend", handleMouseUp);
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(answer)
+    navigator.clipboard
+      .writeText(answer)
       .then(() => {
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       })
-      .catch(err => console.error('Failed to copy: ', err));
+      .catch((err) => console.error("Failed to copy: ", err));
   };
 
   const handleMinimize = () => {
@@ -169,13 +191,13 @@ export default function QuestionAnswer({
   };
 
   return (
-    <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
-      isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none overflow-auto' : ''
-    }`}>
+    <Card
+      className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
+        isExpanded ? "fixed inset-0 z-50 m-0 rounded-none overflow-auto" : ""
+      }`}
+    >
       <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-transparent z-10">
-        <CardTitle className="text-2xl font-bold text-blue-400">
-          Q&A
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
         <div className="flex space-x-2">
           <Button
             onClick={handleCopy}
@@ -197,7 +219,7 @@ export default function QuestionAnswer({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`space-y-4 ${isExpanded ? 'p-4 md:p-8' : ''}`}>
+      <CardContent className={`space-y-4 ${isExpanded ? "p-4 md:p-8" : ""}`}>
         {!isMinimized && (
           <>
             <div className="flex flex-col space-y-2">
@@ -216,7 +238,9 @@ export default function QuestionAnswer({
                   {isAsking ? "Asking..." : "Ask Question"}
                 </Button>
                 <Button
-                  onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)}
+                  onClick={() =>
+                    setShowSuggestedQuestions(!showSuggestedQuestions)
+                  }
                   className="bg-pink-600 hover:bg-pink-700 flex-grow"
                 >
                   Suggested Questions
@@ -259,30 +283,47 @@ export default function QuestionAnswer({
             <div
               ref={answerRef}
               className={`relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content ${
-                isExpanded 
-                  ? 'h-[calc(100vh-280px)] md:h-[calc(100vh-320px)]' 
-                  : ''
+                isExpanded
+                  ? "h-[calc(100vh-280px)] md:h-[calc(105vh-320px)]"
+                  : ""
               }`}
-              style={{ 
+              style={{
                 height: isExpanded ? undefined : `${answerHeight}px`,
-                transition: 'height 0.3s ease-in-out'
+                transition: "height 0.3s ease-in-out",
               }}
             >
-              <ReactMarkdown 
+              <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-2 mb-1" {...props} />,
-                  p: ({node, ...props}) => <p className="mb-2" {...props} />,
-                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2" {...props} />,
-                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2" {...props} />,
-                  li: ({node, ...props}) => <li className="ml-4" {...props} />,
-                  a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
-                  blockquote: ({node, ...props}) => (
-                    <blockquote className="border-l-4 border-gray-500 pl-4 italic my-2" {...props} />
+                  h1: ({ node, ...props }) => (
+                    <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />
                   ),
-                  code({node, inline, className, children, ...props}) {
+                  h2: ({ node, ...props }) => (
+                    <h2 className="text-xl font-bold mt-3 mb-2" {...props} />
+                  ),
+                  h3: ({ node, ...props }) => (
+                    <h3 className="text-lg font-bold mt-2 mb-1" {...props} />
+                  ),
+                  p: ({ node, ...props }) => <p className="mb-2" {...props} />,
+                  ul: ({ node, ...props }) => (
+                    <ul className="list-disc list-inside mb-2" {...props} />
+                  ),
+                  ol: ({ node, ...props }) => (
+                    <ol className="list-decimal list-inside mb-2" {...props} />
+                  ),
+                  li: ({ node, ...props }) => (
+                    <li className="ml-4" {...props} />
+                  ),
+                  a: ({ node, ...props }) => (
+                    <a className="text-blue-400 hover:underline" {...props} />
+                  ),
+                  blockquote: ({ node, ...props }) => (
+                    <blockquote
+                      className="border-l-4 border-gray-500 pl-4 italic my-2"
+                      {...props}
+                    />
+                  ),
+                  code({ node, inline, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || "");
                     return !inline && match ? (
                       <SyntaxHighlighter
@@ -299,7 +340,9 @@ export default function QuestionAnswer({
                       </code>
                     );
                   },
-                  hr: ({node, ...props}) => <hr className="my-4 border-t border-gray-600" {...props} />
+                  hr: ({ node, ...props }) => (
+                    <hr className="my-4 border-t border-gray-600" {...props} />
+                  ),
                 }}
               >
                 {answer}

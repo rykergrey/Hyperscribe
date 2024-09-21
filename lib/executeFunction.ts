@@ -2,7 +2,8 @@ import { AIFunction } from './functions'
 
 export async function executeFunction(func: AIFunction, input: string): Promise<string> {
   try {
-    const response = await fetch('/api/execute-function', {
+    const endpoint = func.api === 'perplexity' ? '/api/execute-perplexity-function' : '/api/execute-function'
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
