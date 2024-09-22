@@ -112,7 +112,7 @@ Channel: ${videoDetails.channelTitle}
 Upload Date: ${videoDetails.publishedAt}
 Video ID: ${videoId}
 
-Transcript:
+Video Transcript:
 ${decodedTranscript}
     `.trim();
 
