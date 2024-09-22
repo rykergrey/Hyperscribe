@@ -47,6 +47,8 @@ interface SandboxProps {
   showManageFunctionsButton?: boolean;
   isExpanded?: boolean;
   onExpand?: () => void;
+  setSelectedText: React.Dispatch<React.SetStateAction<string | null>>;
+  onOpenAudioPlayer: () => void;
 }
 
 export default function Sandbox({
@@ -60,6 +62,8 @@ export default function Sandbox({
   showManageFunctionsButton = false,
   isExpanded,
   onExpand,
+  setSelectedText,
+  onOpenAudioPlayer,
 }: SandboxProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [showManageFunctions, setShowManageFunctions] = useState(false);
@@ -67,18 +71,22 @@ export default function Sandbox({
   const [isCopied, setIsCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showSandboxQueue, setShowSandboxQueue] = useState(false);
-  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [voiceId, setVoiceId] = useState("EXAVITQu4vr4xnSDxMaL");
-  const [modelId, setModelId] = useState("eleven_monolingual_v1");
-  const [stability, setStability] = useState(0.5);
-  const [similarityBoost, setSimilarityBoost] = useState(0.75);
-  const [style, setStyle] = useState(0.0);
-  const [speakerBoost, setSpeakerBoost] = useState(true);
-  const [useSpeedup, setUseSpeedup] = useState(0);
-  const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
-  const [selectedText, setSelectedText] = useState<string | null>(null);
+
+  const sandboxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && sandboxRef.current?.contains(selection.anchorNode)) {
+        const selectedText = selection.toString().trim();
+        setSelectedText(selectedText || null);
+        console.log("Selected text in Sandbox:", selectedText); // Add this line for debugging
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [setSelectedText]);
 
   const handleExecute = async () => {
     if (!selectedFunction || !sandboxText.trim()) return;
@@ -150,18 +158,16 @@ export default function Sandbox({
   };
 
   const handleSpeak = () => {
-    setShowAudioPlayer(true);
-  };
-
-  const handleCloseAudioPlayer = () => {
-    setShowAudioPlayer(false);
+    const textToSpeak = window.getSelection()?.toString().trim() || sandboxText;
+    console.log("Text to be spoken:", textToSpeak);
+    onOpenAudioPlayer();
   };
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
     const selectedText = selection?.toString().trim();
     setSelectedText(selectedText || null);
-    console.log("Selected text:", selectedText); // Add this line
+    console.log("Selected text:", selectedText);
   };
 
   return (
@@ -202,7 +208,6 @@ export default function Sandbox({
           <Button
             onClick={handleSpeak}
             className="p-2 bg-gray-600 hover:bg-gray-700"
-            disabled={isGeneratingSpeech}
           >
             <FaVolumeUp />
           </Button>
@@ -326,6 +331,7 @@ export default function Sandbox({
             )}
 
             <div
+              ref={sandboxRef}
               data-color-mode="dark"
               className="bg-gray-700 rounded-md overflow-hidden"
             >
@@ -357,13 +363,6 @@ export default function Sandbox({
           functions={functions}
           onExecute={handleExecuteQueue}
           onClose={() => setShowSandboxQueue(false)}
-        />
-      )}
-      {showAudioPlayer && (
-        <AudioPlayer
-          text={sandboxText}
-          selectedText={selectedText}
-          onClose={handleCloseAudioPlayer}
         />
       )}
     </Card>

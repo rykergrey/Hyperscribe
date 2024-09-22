@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaCopy, FaExpand, FaMinus, FaVolumeUp } from "react-icons/fa";
@@ -19,6 +19,15 @@ interface SummaryProps {
   appendToSandbox: (text: string) => void;
   isExpanded: boolean;
   onExpand: () => void;
+  onAddToPlaylist: (item: AudioItem) => void;
+  onOpenAudioPlayer: () => void;
+  setSelectedText: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+interface AudioItem {
+  id: string;
+  text: string;
+  blob: Blob;
 }
 
 export default function Summary({
@@ -29,6 +38,9 @@ export default function Summary({
   appendToSandbox,
   isExpanded,
   onExpand,
+  onAddToPlaylist,
+  onOpenAudioPlayer,
+  setSelectedText,
 }: SummaryProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -44,6 +56,21 @@ export default function Summary({
   const [useSpeedup, setUseSpeedup] = useState(0);
   const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
   const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && summaryRef.current?.contains(selection.anchorNode)) {
+        const selectedText = selection.toString().trim();
+        setSelectedText(selectedText || null);
+        console.log("Selected text in Summary:", selectedText); // Add this line for debugging
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [setSelectedText]);
 
   const handleGenerateSummary = async (functionName: string) => {
     setIsGenerating(true);
@@ -58,7 +85,9 @@ export default function Summary({
   };
 
   const handleSendToSandbox = () => {
-    appendToSandbox(summary);
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim();
+    appendToSandbox(selectedText || summary);
   };
 
   const handleCopy = () => {
@@ -76,7 +105,7 @@ export default function Summary({
   };
 
   const handleSpeak = () => {
-    setShowAudioPlayer(true);
+    onOpenAudioPlayer();
   };
 
   const handleCloseAudioPlayer = () => {
@@ -125,6 +154,7 @@ export default function Summary({
         {!isMinimized && (
           <div className="flex flex-col h-full">
             <div
+              ref={summaryRef}
               className="flex-grow overflow-auto mb-4"
               style={{ height: isExpanded ? "auto" : "320px" }}
             >
@@ -187,9 +217,6 @@ export default function Summary({
           </div>
         )}
       </CardContent>
-      {showAudioPlayer && (
-        <AudioPlayer text={summary} onClose={handleCloseAudioPlayer} />
-      )}
     </Card>
   );
 }

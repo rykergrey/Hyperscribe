@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,13 @@ import RawTranscript from "./RawTranscript";
 import Summary from "./Summary";
 import QuestionAnswer from "./QuestionAnswer";
 import Sandbox from "./Sandbox";
+import { AudioPlayer } from "./AudioPlayer";
+
+interface AudioItem {
+  id: string;
+  text: string;
+  blob: Blob;
+}
 
 export default function Hyperscribe() {
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
@@ -28,6 +35,20 @@ export default function Hyperscribe() {
   const [expandedComponent, setExpandedComponent] = useState<string | null>(
     null,
   );
+
+  const [audioPlaylist, setAudioPlaylist] = useState<AudioItem[]>([]);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+  const [audioState, setAudioState] = useState({
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 1,
+    currentItem: null as AudioItem | null,
+    currentIndex: -1,
+  });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const [selectedText, setSelectedText] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -57,6 +78,33 @@ export default function Hyperscribe() {
       document.body.style.overflow = "unset";
     };
   }, [expandedComponent]);
+
+  useEffect(() => {
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    const updateAudioState = () => {
+      setAudioState(prevState => ({
+        ...prevState,
+        isPlaying: !audio.paused,
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+        volume: audio.volume,
+      }));
+    };
+
+    audio.addEventListener("loadedmetadata", updateAudioState);
+    audio.addEventListener("timeupdate", updateAudioState);
+    audio.addEventListener("play", updateAudioState);
+    audio.addEventListener("pause", updateAudioState);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", updateAudioState);
+      audio.removeEventListener("timeupdate", updateAudioState);
+      audio.removeEventListener("play", updateAudioState);
+      audio.removeEventListener("pause", updateAudioState);
+    };
+  }, []);
 
   const handleProcessYouTube = async () => {
     if (!youtubeUrl) return;
@@ -143,6 +191,63 @@ export default function Hyperscribe() {
     return textArea.value;
   };
 
+  const handleOpenAudioPlayer = () => {
+    setShowAudioPlayer(true);
+  };
+
+  const handleCloseAudioPlayer = () => {
+    setShowAudioPlayer(false);
+    // The audio will continue playing
+  };
+
+  const handleAddToPlaylist = (item: AudioItem) => {
+    setAudioPlaylist((prevPlaylist) => [...prevPlaylist, item]);
+  };
+
+  const handleGenerateSpeech = async (component: string) => {
+    let text = '';
+    switch (component) {
+      case 'summary':
+        text = summary;
+        break;
+      case 'sandbox':
+        text = sandboxText;
+        break;
+      case 'qa':
+        text = `Question: ${question}\n\nAnswer: ${answer}`;
+        break;
+      case 'selection':
+        text = selectedText || '';
+        break;
+    }
+
+    try {
+      const response = await fetch("/api/text-to-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      handleAddToPlaylist({
+        id: Date.now().toString(),
+        text: text.substring(0, 50) + "...",
+        blob: audioBlob,
+      });
+    } catch (error) {
+      console.error("Error generating speech:", error);
+    }
+  };
+
+  const handleSetSelectedText = (text: string | null) => {
+    setSelectedText(text);
+    console.log("Selected text in Hyperscribe:", text);
+  };
+
   return (
     <div className="min-h-screen overflow-hidden relative">
       <div className="gradient-container">
@@ -205,73 +310,82 @@ export default function Hyperscribe() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-6 flex flex-col">
-              <RawTranscript
-                rawTranscript={rawTranscript}
-                setRawTranscript={setRawTranscript}
-                appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === "rawTranscript"}
-                onExpand={() =>
-                  setExpandedComponent(
-                    expandedComponent === "rawTranscript"
-                      ? null
-                      : "rawTranscript",
-                  )
-                }
-              />
-              <QuestionAnswer
-                question={question}
-                setQuestion={setQuestion}
-                answer={answer}
-                setAnswer={setAnswer}
-                rawTranscript={rawTranscript}
-                executeFunction={handleExecuteFunction}
-                appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === "questionAnswer"}
-                onExpand={() =>
-                  setExpandedComponent(
-                    expandedComponent === "questionAnswer"
-                      ? null
-                      : "questionAnswer",
-                  )
-                }
-              />
-            </div>
-
-            <div className="space-y-6 flex flex-col">
-              <Summary
-                summary={summary}
-                setSummary={setSummary}
-                rawTranscript={rawTranscript}
-                executeFunction={handleExecuteFunction}
-                appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === "summary"}
-                onExpand={() =>
-                  setExpandedComponent(
-                    expandedComponent === "summary" ? null : "summary",
-                  )
-                }
-              />
-              <Sandbox
-                sandboxText={sandboxText}
-                setSandboxText={setSandboxText}
-                selectedFunction={selectedFunction}
-                setSelectedFunction={setSelectedFunction}
-                functions={functions}
-                setFunctions={setFunctions}
-                executeFunction={handleExecuteFunction}
-                isExpanded={expandedComponent === "sandbox"}
-                onExpand={() =>
-                  setExpandedComponent(
-                    expandedComponent === "sandbox" ? null : "sandbox",
-                  )
-                }
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RawTranscript
+              rawTranscript={rawTranscript}
+              setRawTranscript={setRawTranscript}
+              appendToSandbox={appendToSandbox}
+              isExpanded={expandedComponent === "rawTranscript"}
+              onExpand={() =>
+                setExpandedComponent(
+                  expandedComponent === "rawTranscript" ? null : "rawTranscript"
+                )
+              }
+            />
+            <Summary
+              summary={summary}
+              setSummary={setSummary}
+              rawTranscript={rawTranscript}
+              executeFunction={handleExecuteFunction}
+              appendToSandbox={appendToSandbox}
+              isExpanded={expandedComponent === "summary"}
+              onExpand={() =>
+                setExpandedComponent(
+                  expandedComponent === "summary" ? null : "summary"
+                )
+              }
+              onOpenAudioPlayer={handleOpenAudioPlayer}
+              setSelectedText={handleSetSelectedText}
+            />
+            <QuestionAnswer
+              question={question}
+              setQuestion={setQuestion}
+              answer={answer}
+              setAnswer={setAnswer}
+              rawTranscript={rawTranscript}
+              executeFunction={handleExecuteFunction}
+              appendToSandbox={appendToSandbox}
+              isExpanded={expandedComponent === "questionAnswer"}
+              onExpand={() =>
+                setExpandedComponent(
+                  expandedComponent === "questionAnswer" ? null : "questionAnswer"
+                )
+              }
+              onOpenAudioPlayer={handleOpenAudioPlayer}
+              setSelectedText={handleSetSelectedText}
+            />
+            <Sandbox
+              sandboxText={sandboxText}
+              setSandboxText={setSandboxText}
+              selectedFunction={selectedFunction}
+              setSelectedFunction={setSelectedFunction}
+              functions={functions}
+              setFunctions={setFunctions}
+              executeFunction={handleExecuteFunction}
+              isExpanded={expandedComponent === "sandbox"}
+              onExpand={() =>
+                setExpandedComponent(
+                  expandedComponent === "sandbox" ? null : "sandbox"
+                )
+              }
+              onOpenAudioPlayer={handleOpenAudioPlayer}
+              setSelectedText={handleSetSelectedText}
+            />
           </div>
         </div>
       </div>
+      {showAudioPlayer && (
+        <AudioPlayer
+          playlist={audioPlaylist}
+          onClose={handleCloseAudioPlayer}
+          onAddToPlaylist={handleAddToPlaylist}
+          onGenerateSpeech={handleGenerateSpeech}
+          audioState={audioState}
+          setAudioState={setAudioState}
+          audioRef={audioRef}
+          selectedText={selectedText || ''}
+        />
+      )}
     </div>
   );
 }

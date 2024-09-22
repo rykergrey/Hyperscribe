@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { FaCopy, FaExpand, FaMinus } from "react-icons/fa";
+import { FaCopy, FaExpand, FaMinus, FaVolumeUp } from "react-icons/fa";
 
 export interface QuestionAnswerProps {
   question: string;
@@ -19,6 +19,10 @@ export interface QuestionAnswerProps {
     input: string,
   ) => Promise<string | undefined>;
   appendToSandbox: (text: string) => void;
+  setSelectedText: React.Dispatch<React.SetStateAction<string | null>>;
+  isExpanded: boolean;
+  onExpand: () => void;
+  onOpenAudioPlayer: () => void;
 }
 
 export default function QuestionAnswer({
@@ -29,8 +33,10 @@ export default function QuestionAnswer({
   rawTranscript,
   executeFunction,
   appendToSandbox,
+  setSelectedText,
   isExpanded,
   onExpand,
+  onOpenAudioPlayer,
 }: QuestionAnswerProps) {
   const answerRef = useRef<HTMLDivElement>(null);
   const [answerHeight, setAnswerHeight] = useState(320);
@@ -191,6 +197,28 @@ export default function QuestionAnswer({
     setIsMinimized(!isMinimized);
   };
 
+  const handleSpeak = () => {
+    const textToSpeak = window.getSelection()?.toString() || answer;
+    console.log("Text to be spoken:", textToSpeak);
+    onOpenAudioPlayer();
+  };
+
+  const qaRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && qaRef.current?.contains(selection.anchorNode)) {
+        const selectedText = selection.toString().trim();
+        setSelectedText(selectedText || null);
+        console.log("Selected text in QuestionAnswer:", selectedText); // Add this line for debugging
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [setSelectedText]);
+
   return (
     <Card
       className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
@@ -219,6 +247,12 @@ export default function QuestionAnswer({
             className="p-2 bg-gray-600 hover:bg-gray-700"
           >
             <FaExpand />
+          </Button>
+          <Button
+            onClick={handleSpeak}
+            className="p-2 bg-gray-600 hover:bg-gray-700"
+          >
+            <FaVolumeUp />
           </Button>
         </div>
       </CardHeader>
@@ -282,7 +316,7 @@ export default function QuestionAnswer({
               </div>
             )}
             <div
-              ref={answerRef}
+              ref={qaRef}
               className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content"
               style={{
                 height: isExpanded ? "calc(100vh - 180px)" : `${answerHeight}px`,

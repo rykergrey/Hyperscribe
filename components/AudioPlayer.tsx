@@ -9,102 +9,166 @@ import {
   FaVolumeMute,
   FaSpinner,
   FaDownload,
+  FaRandom,
+  FaRedo,
 } from "react-icons/fa";
+import { AudioPlaylist } from "./AudioPlaylist";
 
-interface AudioPlayerProps {
+interface AudioItem {
+  id: string;
   text: string;
-  onClose: () => void;
+  blob: Blob;
 }
 
-export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
+interface AudioPlayerProps {
+  playlist: AudioItem[];
+  onClose: () => void;
+  onAddToPlaylist: (item: AudioItem) => void;
+  onGenerateSpeech: (component: string) => Promise<void>;
+  audioState: {
+    isPlaying: boolean;
+    currentTime: number;
+    duration: number;
+    volume: number;
+    currentItem: AudioItem | null;
+    currentIndex: number;
+  };
+  setAudioState: React.Dispatch<React.SetStateAction<typeof audioState>>;
+  audioRef: React.RefObject<HTMLAudioElement>;
+  selectedText: string;
+}
+
+export function AudioPlayer({ 
+  playlist, 
+  onClose, 
+  onAddToPlaylist, 
+  onGenerateSpeech, 
+  audioState, 
+  setAudioState, 
+  audioRef, 
+  selectedText 
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentItem, setCurrentItem] = useState<AudioItem | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPlaylistEnded, setIsPlaylistEnded] = useState(false);
 
   useEffect(() => {
-    audioRef.current = new Audio();
-    audioRef.current.addEventListener("ended", () => setIsPlaying(false));
-    audioRef.current.addEventListener("loadedmetadata", () => {
-      setDuration(audioRef.current!.duration);
-    });
-    audioRef.current.addEventListener("timeupdate", () => {
-      setCurrentTime(audioRef.current!.currentTime);
-    });
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-    };
+    const audio = audioRef.current;
+    if (audio) {
+      const updateAudioState = () => {
+        setAudioState(prevState => ({
+          ...prevState,
+          isPlaying: !audio.paused,
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          volume: audio.volume,
+        }));
+      };
+
+      audio.addEventListener("loadedmetadata", updateAudioState);
+      audio.addEventListener("timeupdate", updateAudioState);
+      audio.addEventListener("play", updateAudioState);
+      audio.addEventListener("pause", updateAudioState);
+      audio.addEventListener("ended", handleAudioEnded);
+
+      return () => {
+        audio.removeEventListener("loadedmetadata", updateAudioState);
+        audio.removeEventListener("timeupdate", updateAudioState);
+        audio.removeEventListener("play", updateAudioState);
+        audio.removeEventListener("pause", updateAudioState);
+        audio.removeEventListener("ended", handleAudioEnded);
+      };
+    }
   }, []);
 
-  const fetchAndPlayAudio = async () => {
+  const playNext = () => {
+    if (playlist.length === 0) return;
+    let nextIndex = currentIndex + 1;
+    if (nextIndex >= playlist.length) {
+      if (isRepeating) {
+        nextIndex = 0;
+      } else {
+        setIsPlaylistEnded(true);
+        return;
+      }
+    }
+    playAudio(playlist[nextIndex]);
+  };
+
+  const handleAudioEnded = () => {
+    playNext();
+  };
+
+  const playAudio = (item: AudioItem) => {
     setIsLoading(true);
-    const textToConvert = selectedText || text;
-    const cleanedText = textToConvert.replace(/^### [^\n]+\n\n/, '');
-    console.log("Text being sent to API:", cleanedText);
-    try {
-      const response = await fetch("/api/text-to-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleanedText }),
+    setAudioState(prevState => ({
+      ...prevState,
+      currentItem: item,
+      currentIndex: playlist.findIndex(i => i.id === item.id),
+    }));
+    setIsPlaylistEnded(false);
+    if (audioRef.current) {
+      audioRef.current.src = URL.createObjectURL(item.blob);
+      audioRef.current.play().then(() => {
+        setIsLoading(false);
+      }).catch((error) => {
+        console.error("Error playing audio:", error);
+        setIsLoading(false);
       });
-
-      if (!response.ok) throw new Error("Failed to generate speech");
-
-      const reader = response.body!.getReader();
-      const chunks: Uint8Array[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-
-      const blob = new Blob(chunks, { type: "audio/mpeg" });
-      setAudioBlob(blob);
-      const url = URL.createObjectURL(blob);
-
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error("Error fetching audio:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const togglePlayPause = () => {
     if (isLoading) return;
 
-    if (isPlaying) {
+    if (audioState.isPlaying) {
       audioRef.current?.pause();
     } else if (audioRef.current?.src) {
       audioRef.current.play();
-    } else {
-      fetchAndPlayAudio();
+    } else if (playlist.length > 0) {
+      playAudio(playlist[0]);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const stopAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      setIsPlaying(false);
+      setAudioState(prevState => ({ ...prevState, isPlaying: false, currentTime: 0 }));
+    }
+  };
+
+  const playPrevious = () => {
+    if (playlist.length === 0) return;
+    let prevIndex = audioState.currentIndex - 1;
+    if (prevIndex < 0) {
+      prevIndex = playlist.length - 1;
+    }
+    playAudio(playlist[prevIndex]);
+  };
+
+  const toggleShuffle = () => {
+    setIsShuffled(!isShuffled);
+  };
+
+  const toggleRepeat = () => {
+    setIsRepeating(!isRepeating);
+    if (isPlaylistEnded) {
+      playAudio(playlist[0]);
     }
   };
 
   const handleVolumeChange = (newVolume: number[]) => {
     const volumeValue = newVolume[0];
-    setVolume(volumeValue);
+    setAudioState(prevState => ({ ...prevState, volume: volumeValue }));
     if (audioRef.current) {
       audioRef.current.volume = volumeValue;
     }
@@ -114,21 +178,19 @@ export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
     const timeValue = newTime[0];
     if (audioRef.current) {
       audioRef.current.currentTime = timeValue;
-      setCurrentTime(timeValue);
+      setAudioState(prevState => ({ ...prevState, currentTime: timeValue }));
     }
   };
 
-  const handleDownload = () => {
-    if (audioBlob) {
-      const url = URL.createObjectURL(audioBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "audio.mp3";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+  const handleDownload = (item: AudioItem) => {
+    const url = URL.createObjectURL(item.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audio_${item.id}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const formatTime = (time: number) => {
@@ -136,6 +198,16 @@ export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
+
+  const handleGenerateSpeech = async (component: string) => {
+    setIsGenerating(true);
+    await onGenerateSpeech(component);
+    setIsGenerating(false);
+  };
+
+  useEffect(() => {
+    console.log("Selected text in AudioPlayer:", selectedText); // Add this line for debugging
+  }, [selectedText]);
 
   return (
     <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg z-50 w-80 text-white border border-gray-700 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
@@ -145,7 +217,51 @@ export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
           X
         </Button>
       </div>
-      <div className="flex items-center space-x-2 mb-2">
+
+      <div className="mb-4">
+        <AudioPlaylist
+          playlist={playlist}
+          currentItem={audioState.currentItem}
+          onPlay={playAudio}
+          onDownload={handleDownload}
+        />
+      </div>
+
+      <div className="flex justify-between mb-4">
+        <Button
+          onClick={() => handleGenerateSpeech('summary')}
+          disabled={isGenerating}
+          className="px-2 py-1 text-xs"
+        >
+          Summary
+        </Button>
+        <Button
+          onClick={() => handleGenerateSpeech('sandbox')}
+          disabled={isGenerating}
+          className="px-2 py-1 text-xs"
+        >
+          Sandbox
+        </Button>
+        <Button
+          onClick={() => handleGenerateSpeech('qa')}
+          disabled={isGenerating}
+          className="px-2 py-1 text-xs"
+        >
+          Q&A
+        </Button>
+        <Button
+          onClick={() => handleGenerateSpeech('selection')}
+          disabled={isGenerating || !selectedText}
+          className="px-2 py-1 text-xs"
+        >
+          Selection
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between space-x-2 mb-2">
+        <Button onClick={playPrevious} className="p-2 bg-gray-600 hover:bg-gray-700">
+          ⏮️
+        </Button>
         <Button
           onClick={togglePlayPause}
           className="p-2 bg-blue-600 hover:bg-blue-700"
@@ -153,43 +269,43 @@ export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
         >
           {isLoading ? (
             <FaSpinner className="animate-spin" />
-          ) : isPlaying ? (
+          ) : audioState.isPlaying ? (
             <FaPause />
           ) : (
             <FaPlay />
           )}
         </Button>
-        <Button
-          onClick={stopAudio}
-          className="p-2 bg-red-600 hover:bg-red-700"
-          disabled={isLoading || !audioRef.current?.src}
-        >
+        <Button onClick={stopAudio} className="p-2 bg-red-600 hover:bg-red-700" disabled={isLoading || !audioRef.current?.src}>
           <FaStop />
         </Button>
-        <Button
-          onClick={handleDownload}
-          className="p-2 bg-green-600 hover:bg-green-700"
-          disabled={!audioBlob}
-        >
-          <FaDownload />
+        <Button onClick={playNext} className="p-2 bg-gray-600 hover:bg-gray-700">
+          ⏭️
+        </Button>
+        <Button onClick={toggleShuffle} className={`p-2 ${isShuffled ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'}`}>
+          <FaRandom />
+        </Button>
+        <Button onClick={toggleRepeat} className={`p-2 ${isRepeating ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'}`}>
+          <FaRedo />
         </Button>
       </div>
+
       <div className="flex items-center space-x-2 mb-2">
-        <span className="text-xs">{formatTime(currentTime)}</span>
+        <span className="text-xs">{formatTime(audioState.currentTime)}</span>
         <Slider
-          value={[currentTime]}
+          value={[audioState.currentTime]}
           min={0}
-          max={duration}
+          max={audioState.duration}
           step={0.1}
           onValueChange={handleProgressChange}
           className="w-full"
         />
-        <span className="text-xs">{formatTime(duration)}</span>
+        <span className="text-xs">{formatTime(audioState.duration)}</span>
       </div>
+
       <div className="flex items-center space-x-2">
-        {volume === 0 ? <FaVolumeMute className="text-gray-400" /> : <FaVolumeUp className="text-gray-400" />}
+        {audioState.volume === 0 ? <FaVolumeMute className="text-gray-400" /> : <FaVolumeUp className="text-gray-400" />}
         <Slider
-          value={[volume]}
+          value={[audioState.volume]}
           min={0}
           max={1}
           step={0.01}
