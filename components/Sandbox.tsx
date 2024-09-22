@@ -78,6 +78,7 @@ export default function Sandbox({
   const [useSpeedup, setUseSpeedup] = useState(0);
   const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
   const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+  const [selectedText, setSelectedText] = useState<string | null>(null);
 
   const handleExecute = async () => {
     if (!selectedFunction || !sandboxText.trim()) return;
@@ -88,9 +89,9 @@ export default function Sandbox({
       const result = await executeFunction(selectedFunction, sandboxText);
       console.log("Result:", result);
       if (result) {
-        // Remove the function name from the result
-        const cleanedResult = result.replace(`# ${selectedFunction}\n\n`, '');
-        setSandboxText(cleanedResult);
+        // Include the function name in the result
+        const formattedResult = `### ${selectedFunction}\n\n${result}`;
+        setSandboxText(formattedResult);
       }
     } catch (error) {
       console.error("Error executing function:", error);
@@ -120,13 +121,32 @@ export default function Sandbox({
     setIsMinimized(!isMinimized);
   };
 
-  const handleExecuteQueue = async (functionQueue: string[]) => {
-    let result = sandboxText;
+  const handleExecuteQueue = async (functionQueue: string[], resultMode: "replace" | "append") => {
+    let currentContent = sandboxText;
+    let results: string[] = [];
+
     for (const funcName of functionQueue) {
-      result = await executeFunction(funcName, result) || result;
+      try {
+        const result = await executeFunction(funcName, currentContent);
+        if (result) {
+          // Format the function name like the Q&A component's question style
+          const formattedResult = `## ${funcName}\n\n${result}`;
+          results.push(formattedResult);
+          currentContent = result; // Use the raw result as input for the next function
+        } else {
+          console.error(`Function ${funcName} returned no result`);
+        }
+      } catch (error) {
+        console.error(`Error executing function ${funcName}:`, error);
+      }
     }
-    setSandboxText(result);
-    setShowSandboxQueue(false);
+
+    if (resultMode === "replace") {
+      setSandboxText(results[results.length - 1] || ''); // Set content to the result of the last function
+    } else { // append mode
+      const combinedResults = results.join('\n\n');
+      setSandboxText((prevContent) => prevContent + '\n\n' + combinedResults);
+    }
   };
 
   const handleSpeak = () => {
@@ -137,11 +157,20 @@ export default function Sandbox({
     setShowAudioPlayer(false);
   };
 
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim();
+    setSelectedText(selectedText || null);
+    console.log("Selected text:", selectedText); // Add this line
+  };
+
   return (
     <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
       isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none overflow-auto' : ''
     }`}>
-      <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-transparent z-10">
+      <CardHeader className={`flex flex-row items-center justify-between sticky top-0 bg-transparent z-10 ${
+        isExpanded ? 'p-2' : ''
+      }`}>
         <CardTitle className="text-2xl font-bold text-blue-400">
           Sandbox
         </CardTitle>
@@ -179,68 +208,113 @@ export default function Sandbox({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`space-y-4 ${isExpanded ? 'p-4 md:p-8' : ''}`}>
+      <CardContent className={`space-y-4 ${isExpanded ? 'pt-0 px-2' : ''}`}>
         {!isMinimized && (
           <>
-            <Select value={selectedFunction} onValueChange={setSelectedFunction}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100 w-full">
-                <SelectValue placeholder="Select function" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(functions).map((funcName) => (
-                  <SelectItem key={funcName} value={funcName}>
-                    {funcName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={handleExecute}
-                className="bg-purple-600 hover:bg-purple-700 flex-grow"
-                disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
-              >
-                {isExecuting ? "Executing..." : "Execute"}
-              </Button>
-              {showManageFunctionsButton && (
-                <Button
-                  onClick={() => setShowManageFunctions(!showManageFunctions)}
-                  className="bg-blue-600 hover:bg-blue-700 flex-grow"
-                >
-                  {showManageFunctions ? "Close Manager" : "Manage Functions"}
-                </Button>
-              )}
-              <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-                <DialogTrigger asChild>
-                  <Button className="bg-red-600 hover:bg-red-700 flex-grow">
-                    Clear
+            <div className={`flex ${isExpanded ? 'flex-row items-center space-x-2' : 'flex-col space-y-2'}`}>
+              <Select value={selectedFunction} onValueChange={setSelectedFunction} className={isExpanded ? 'flex-grow' : 'w-full'}>
+                <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100 w-full">
+                  <SelectValue placeholder="Select function" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(functions).map((funcName) => (
+                    <SelectItem key={funcName} value={funcName}>
+                      {funcName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isExpanded && (
+                <>
+                  <Button
+                    onClick={handleExecute}
+                    className="bg-purple-600 hover:bg-purple-700"
+                    disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
+                  >
+                    {isExecuting ? "Executing..." : "Execute"}
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-gray-800 text-gray-100">
-                  <DialogHeader>
-                    <DialogTitle>Clear Sandbox</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to clear the sandbox? This action
-                      cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      onClick={() => setShowClearDialog(false)}
-                      className="bg-gray-600 hover:bg-gray-700"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleClearSandbox}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
+                  <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-red-600 hover:bg-red-700">
+                        Clear
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-gray-800 text-gray-100">
+                      <DialogHeader>
+                        <DialogTitle>Clear Sandbox</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to clear the sandbox? This action
+                          cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button
+                          onClick={() => setShowClearDialog(false)}
+                          className="bg-gray-600 hover:bg-gray-700"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleClearSandbox}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Clear
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+            </div>
+            {!isExpanded && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleExecute}
+                  className="bg-purple-600 hover:bg-purple-700 flex-grow"
+                  disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
+                >
+                  {isExecuting ? "Executing..." : "Execute"}
+                </Button>
+                {showManageFunctionsButton && (
+                  <Button
+                    onClick={() => setShowManageFunctions(!showManageFunctions)}
+                    className="bg-blue-600 hover:bg-blue-700 flex-grow"
+                  >
+                    {showManageFunctions ? "Close Manager" : "Manage Functions"}
+                  </Button>
+                )}
+                <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-red-600 hover:bg-red-700 flex-grow">
                       Clear
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                  </DialogTrigger>
+                  <DialogContent className="bg-gray-800 text-gray-100">
+                    <DialogHeader>
+                      <DialogTitle>Clear Sandbox</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to clear the sandbox? This action
+                        cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button
+                        onClick={() => setShowClearDialog(false)}
+                        className="bg-gray-600 hover:bg-gray-700"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleClearSandbox}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Clear
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
 
             {showManageFunctions && showManageFunctionsButton && (
               <FunctionManager
@@ -263,11 +337,12 @@ export default function Sandbox({
                 textareaProps={{
                   placeholder: "Send text here...",
                   className: "!bg-gray-700 !text-gray-100",
+                  onMouseUp: handleTextSelection,
                 }}
                 previewOptions={{
                   className: "!bg-gray-700 !text-gray-100",
                 }}
-                height={isExpanded ? "calc(100vh - 280px)" : "320px"}
+                height={isExpanded ? "calc(100vh - 140px)" : "320px"}
                 style={{
                   ...mdEditorStyles,
                   transition: 'height 0.3s ease-in-out'
@@ -287,6 +362,7 @@ export default function Sandbox({
       {showAudioPlayer && (
         <AudioPlayer
           text={sandboxText}
+          selectedText={selectedText}
           onClose={handleCloseAudioPlayer}
         />
       )}

@@ -17,19 +17,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const response = await youtube.commentThreads.list({
-      part: ["snippet"],
-      videoId: videoId,
-      maxResults: 200, // Adjust this number as needed
-    });
+    const [comments, videoDetails] = await Promise.all([
+      fetchComments(videoId),
+      fetchVideoDetails(videoId),
+    ]);
 
-    const comments =
-      response.data.items
-        ?.map((item) => item.snippet?.topLevelComment?.snippet?.textDisplay)
-        .filter(Boolean)
-        .join("\n\n") || "No comments found.";
+    const formattedOutput = `
+Title: ${videoDetails.title}
+Channel: ${videoDetails.channelTitle}
+Upload Date: ${videoDetails.publishedAt}
+Video ID: ${videoId}
 
-    return NextResponse.json({ comments });
+Comments Section:
+${comments}
+    `.trim();
+
+    return NextResponse.json({ comments: formattedOutput });
   } catch (error) {
     console.error("Error fetching YouTube comments:", error);
     // Log more details about the error
@@ -45,4 +48,38 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+async function fetchComments(videoId: string): Promise<string> {
+  const response = await youtube.commentThreads.list({
+    part: ["snippet"],
+    videoId: videoId,
+    maxResults: 200, // Adjust this number as needed
+  });
+
+  const comments =
+    response.data.items
+      ?.map((item) => item.snippet?.topLevelComment?.snippet?.textDisplay)
+      .filter(Boolean)
+      .join("\n\n") || "No comments found.";
+
+  return comments;
+}
+
+async function fetchVideoDetails(videoId: string) {
+  const response = await youtube.videos.list({
+    part: ["snippet"],
+    id: [videoId],
+  });
+
+  const videoDetails = response.data.items?.[0]?.snippet;
+  if (!videoDetails) {
+    throw new Error("Video details not found");
+  }
+
+  return {
+    title: videoDetails.title,
+    channelTitle: videoDetails.channelTitle,
+    publishedAt: videoDetails.publishedAt,
+  };
 }

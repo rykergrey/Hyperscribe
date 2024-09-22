@@ -60,15 +60,16 @@ export default function QuestionAnswer({
       const input = `Context: ${rawTranscript}\n\nQuestion: ${question}`;
       const result = await executeFunction("Answer Question", input);
       if (result) {
-        const newAnswer = result.replace(/^# Answer Question\n\n/, "");
-        const newEntry = `## ${question}\n\n${newAnswer}\n\n---\n\n`;
+        // Remove the function name and any leading newlines
+        const newAnswer = result.replace(/^# Answer Question\s*\n+/, "").trim();
+        const newEntry = `## Q: ${question}\n\n${newAnswer}\n\n---\n\n`;
         setAnswer((prevAnswer) => newEntry + prevAnswer);
       }
     } catch (error) {
       console.error("Error asking question:", error);
       setAnswer(
         (prevAnswer) =>
-          `Error: An error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`,
+          `## Error\n\nAn error occurred while processing your question. Please try again.\n\n---\n\n${prevAnswer}`,
       );
     } finally {
       setIsAsking(false);
@@ -196,7 +197,9 @@ export default function QuestionAnswer({
         isExpanded ? "fixed inset-0 z-50 m-0 rounded-none overflow-auto" : ""
       }`}
     >
-      <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-transparent z-10">
+      <CardHeader className={`flex flex-row items-center justify-between sticky top-0 bg-transparent z-10 ${
+        isExpanded ? 'p-2' : ''
+      }`}>
         <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
         <div className="flex space-x-2">
           <Button
@@ -219,35 +222,33 @@ export default function QuestionAnswer({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`space-y-4 ${isExpanded ? "p-4 md:p-8" : ""}`}>
+      <CardContent className={`space-y-4 ${isExpanded ? 'pt-0 px-2' : ''}`}>
         {!isMinimized && (
           <>
-            <div className="flex flex-col space-y-2">
+            <div className={`space-y-4 ${isExpanded ? 'lg:space-y-0 lg:flex lg:items-center lg:space-x-2' : ''}`}>
               <Input
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                className="w-full bg-gray-700 border-gray-600 text-gray-100"
+                className={`bg-gray-700 border-gray-600 text-gray-100 w-full ${isExpanded ? 'lg:flex-grow' : ''}`}
                 placeholder="Enter your question here..."
               />
-              <div className="flex flex-wrap gap-2">
+              <div className={`grid grid-cols-3 gap-2 ${isExpanded ? 'lg:flex lg:space-x-2' : ''}`}>
                 <Button
                   onClick={handleAskQuestion}
-                  className="bg-purple-600 hover:bg-purple-700 flex-grow"
+                  className="bg-purple-600 hover:bg-purple-700 w-full"
                   disabled={isAsking || !question.trim()}
                 >
                   {isAsking ? "Asking..." : "Ask Question"}
                 </Button>
                 <Button
-                  onClick={() =>
-                    setShowSuggestedQuestions(!showSuggestedQuestions)
-                  }
-                  className="bg-pink-600 hover:bg-pink-700 flex-grow"
+                  onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)}
+                  className="bg-pink-600 hover:bg-pink-700 w-full"
                 >
                   Suggested Questions
                 </Button>
                 <Button
                   onClick={handleSendToSandbox}
-                  className="bg-orange-600 hover:bg-orange-700 flex-grow relative isolate group"
+                  className="bg-orange-600 hover:bg-orange-700 relative isolate group w-full"
                 >
                   <span className="pointer-events-none absolute inset-x-0 bottom-full mb-2 flex items-center justify-center">
                     <span className="bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
@@ -282,27 +283,20 @@ export default function QuestionAnswer({
             )}
             <div
               ref={answerRef}
-              className={`relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content ${
-                isExpanded
-                  ? "h-[calc(100vh-280px)] md:h-[calc(105vh-320px)]"
-                  : ""
-              }`}
+              className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content"
               style={{
-                height: isExpanded ? undefined : `${answerHeight}px`,
+                height: isExpanded ? "calc(100vh - 180px)" : `${answerHeight}px`,
                 transition: "height 0.3s ease-in-out",
               }}
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  h1: ({ node, ...props }) => (
-                    <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />
-                  ),
                   h2: ({ node, ...props }) => (
-                    <h2 className="text-xl font-bold mt-3 mb-2" {...props} />
-                  ),
-                  h3: ({ node, ...props }) => (
-                    <h3 className="text-lg font-bold mt-2 mb-1" {...props} />
+                    <h2
+                      className="text-xl font-bold mt-4 mb-2 text-blue-400 bg-gray-800 p-3 rounded-t-lg"
+                      {...props}
+                    />
                   ),
                   p: ({ node, ...props }) => <p className="mb-2" {...props} />,
                   ul: ({ node, ...props }) => (

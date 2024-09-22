@@ -25,7 +25,9 @@ export default function Hyperscribe() {
     useState<Record<string, AIFunction>>(defaultFunctions);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  const [expandedComponent, setExpandedComponent] = useState<string | null>(null);
+  const [expandedComponent, setExpandedComponent] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -47,12 +49,12 @@ export default function Hyperscribe() {
 
   useEffect(() => {
     if (expandedComponent) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [expandedComponent]);
 
@@ -81,7 +83,8 @@ export default function Hyperscribe() {
     try {
       const result = await executeFunction(functions[functionName], input);
       if (result) {
-        return `# ${functionName}\n\n${result}`;
+        // Remove the function name and any leading newlines
+        return result.replace(/^### .*\n+/, "").trim();
       }
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
@@ -111,7 +114,9 @@ export default function Hyperscribe() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`Failed to process YouTube comments: ${errorData.error}. Details: ${errorData.details}`);
+        throw new Error(
+          `Failed to process YouTube comments: ${errorData.error}. Details: ${errorData.details}`,
+        );
       }
       const data = await response.json();
       setRawTranscript(decodeHTMLEntities(data.comments));
@@ -125,9 +130,10 @@ export default function Hyperscribe() {
   };
 
   const extractVideoId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    return match && match[2].length === 11 ? match[2] : null;
   };
 
   // Function to decode HTML entities
@@ -186,7 +192,6 @@ export default function Hyperscribe() {
                       Retrieve Transcript
                     </Button>
 
-
                     <Button
                       onClick={handleProcessYouTubeComments}
                       className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
@@ -194,8 +199,6 @@ export default function Hyperscribe() {
                     >
                       Retrieve Comments
                     </Button>
-
-
                   </div>
                 </div>
               </CardContent>
@@ -208,8 +211,14 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 setRawTranscript={setRawTranscript}
                 appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === 'rawTranscript'}
-                onExpand={() => setExpandedComponent(expandedComponent === 'rawTranscript' ? null : 'rawTranscript')}
+                isExpanded={expandedComponent === "rawTranscript"}
+                onExpand={() =>
+                  setExpandedComponent(
+                    expandedComponent === "rawTranscript"
+                      ? null
+                      : "rawTranscript",
+                  )
+                }
               />
               <QuestionAnswer
                 question={question}
@@ -219,8 +228,14 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === 'questionAnswer'}
-                onExpand={() => setExpandedComponent(expandedComponent === 'questionAnswer' ? null : 'questionAnswer')}
+                isExpanded={expandedComponent === "questionAnswer"}
+                onExpand={() =>
+                  setExpandedComponent(
+                    expandedComponent === "questionAnswer"
+                      ? null
+                      : "questionAnswer",
+                  )
+                }
               />
             </div>
 
@@ -231,8 +246,12 @@ export default function Hyperscribe() {
                 rawTranscript={rawTranscript}
                 executeFunction={handleExecuteFunction}
                 appendToSandbox={appendToSandbox}
-                isExpanded={expandedComponent === 'summary'}
-                onExpand={() => setExpandedComponent(expandedComponent === 'summary' ? null : 'summary')}
+                isExpanded={expandedComponent === "summary"}
+                onExpand={() =>
+                  setExpandedComponent(
+                    expandedComponent === "summary" ? null : "summary",
+                  )
+                }
               />
               <Sandbox
                 sandboxText={sandboxText}
@@ -242,8 +261,12 @@ export default function Hyperscribe() {
                 functions={functions}
                 setFunctions={setFunctions}
                 executeFunction={handleExecuteFunction}
-                isExpanded={expandedComponent === 'sandbox'}
-                onExpand={() => setExpandedComponent(expandedComponent === 'sandbox' ? null : 'sandbox')}
+                isExpanded={expandedComponent === "sandbox"}
+                onExpand={() =>
+                  setExpandedComponent(
+                    expandedComponent === "sandbox" ? null : "sandbox",
+                  )
+                }
               />
             </div>
           </div>

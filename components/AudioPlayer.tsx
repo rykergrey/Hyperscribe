@@ -16,7 +16,7 @@ interface AudioPlayerProps {
   onClose: () => void;
 }
 
-export function AudioPlayer({ text, onClose }: AudioPlayerProps) {
+export function AudioPlayer({ text, selectedText, onClose }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -44,11 +44,14 @@ export function AudioPlayer({ text, onClose }: AudioPlayerProps) {
 
   const fetchAndPlayAudio = async () => {
     setIsLoading(true);
+    const textToConvert = selectedText || text;
+    const cleanedText = textToConvert.replace(/^### [^\n]+\n\n/, '');
+    console.log("Text being sent to API:", cleanedText);
     try {
       const response = await fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: cleanedText }),
       });
 
       if (!response.ok) throw new Error("Failed to generate speech");
@@ -135,43 +138,44 @@ export function AudioPlayer({ text, onClose }: AudioPlayerProps) {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg z-50 w-80">
+    <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg z-50 w-80 text-white border border-gray-700 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-4">
-          <Button
-            onClick={togglePlayPause}
-            className="p-2"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <FaSpinner className="animate-spin" />
-            ) : isPlaying ? (
-              <FaPause />
-            ) : (
-              <FaPlay />
-            )}
-          </Button>
-          <Button
-            onClick={stopAudio}
-            className="p-2"
-            disabled={isLoading || !audioRef.current?.src}
-          >
-            <FaStop />
-          </Button>
-          <Button
-            onClick={handleDownload}
-            className="p-2"
-            disabled={!audioBlob}
-          >
-            <FaDownload />
-          </Button>
-        </div>
-        <Button onClick={onClose} className="p-2">
+        <h2 className="text-sm font-bold">Audio Player</h2>
+        <Button onClick={onClose} className="p-1 h-6 w-6 text-xs">
           X
         </Button>
       </div>
       <div className="flex items-center space-x-2 mb-2">
-        <span className="text-xs text-white">{formatTime(currentTime)}</span>
+        <Button
+          onClick={togglePlayPause}
+          className="p-2 bg-blue-600 hover:bg-blue-700"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <FaSpinner className="animate-spin" />
+          ) : isPlaying ? (
+            <FaPause />
+          ) : (
+            <FaPlay />
+          )}
+        </Button>
+        <Button
+          onClick={stopAudio}
+          className="p-2 bg-red-600 hover:bg-red-700"
+          disabled={isLoading || !audioRef.current?.src}
+        >
+          <FaStop />
+        </Button>
+        <Button
+          onClick={handleDownload}
+          className="p-2 bg-green-600 hover:bg-green-700"
+          disabled={!audioBlob}
+        >
+          <FaDownload />
+        </Button>
+      </div>
+      <div className="flex items-center space-x-2 mb-2">
+        <span className="text-xs">{formatTime(currentTime)}</span>
         <Slider
           value={[currentTime]}
           min={0}
@@ -180,10 +184,10 @@ export function AudioPlayer({ text, onClose }: AudioPlayerProps) {
           onValueChange={handleProgressChange}
           className="w-full"
         />
-        <span className="text-xs text-white">{formatTime(duration)}</span>
+        <span className="text-xs">{formatTime(duration)}</span>
       </div>
       <div className="flex items-center space-x-2">
-        {volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
+        {volume === 0 ? <FaVolumeMute className="text-gray-400" /> : <FaVolumeUp className="text-gray-400" />}
         <Slider
           value={[volume]}
           min={0}
