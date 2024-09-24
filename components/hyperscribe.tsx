@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultFunctions, AIFunction } from "@/lib/functions";
 import { executeFunction } from "@/lib/executeFunction";
+import { useTextSelection } from '@/hooks/useTextSelection';
 
 // Import components statically
 import RawTranscript from "./RawTranscript";
@@ -21,6 +22,12 @@ interface AudioItem {
 }
 
 export default function Hyperscribe() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
   const [rawTranscript, setRawTranscript] = useState("");
   const [summary, setSummary] = useState("");
@@ -49,6 +56,13 @@ export default function Hyperscribe() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [selectedText, setSelectedText] = useState<string | null>(null);
+
+  const handleSetSelectedText = useCallback((text: string | null) => {
+    console.log("Selected text in Hyperscribe:", text); // Add this line for debugging
+    setSelectedText(text);
+  }, []);
+
+  const textSelectionRef = useTextSelection(handleSetSelectedText);
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -243,13 +257,16 @@ export default function Hyperscribe() {
     }
   };
 
-  const handleSetSelectedText = (text: string | null) => {
-    setSelectedText(text);
-    console.log("Selected text in Hyperscribe:", text);
-  };
+  const handleReorderPlaylist = useCallback((newPlaylist: AudioItem[]) => {
+    setAudioPlaylist(newPlaylist);
+  }, []);
+
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
 
   return (
-    <div className="min-h-screen overflow-hidden relative">
+    <div className="min-h-screen overflow-hidden relative" ref={textSelectionRef}>
       <div className="gradient-container">
         <div className="absolute inset-0 bg-gradient-animation"></div>
       </div>
@@ -335,6 +352,7 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
+              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
             <QuestionAnswer
@@ -352,6 +370,7 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
+              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
             <Sandbox
@@ -369,6 +388,7 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
+              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
           </div>
@@ -384,6 +404,7 @@ export default function Hyperscribe() {
           setAudioState={setAudioState}
           audioRef={audioRef}
           selectedText={selectedText || ''}
+          onReorderPlaylist={handleReorderPlaylist}
         />
       )}
     </div>

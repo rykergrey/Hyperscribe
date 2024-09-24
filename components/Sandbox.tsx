@@ -24,6 +24,7 @@ import { FaCopy, FaExpand, FaMinus, FaList } from 'react-icons/fa';
 import { SandboxQueue } from "./SandboxQueue";
 import { FaVolumeUp } from 'react-icons/fa';
 import { AudioPlayer } from "./AudioPlayer";
+import { useTextSelection } from "@/hooks/useTextSelection";
 
 // Custom styles for the MDEditor
 const mdEditorStyles = {
@@ -72,44 +73,24 @@ export default function Sandbox({
   const [isMinimized, setIsMinimized] = useState(false);
   const [showSandboxQueue, setShowSandboxQueue] = useState(false);
 
-  const sandboxRef = useRef<HTMLDivElement>(null);
+  const sandboxRef = useTextSelection(setSelectedText);
 
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection && sandboxRef.current?.contains(selection.anchorNode)) {
-        const selectedText = selection.toString().trim();
-        setSelectedText(selectedText || null);
-        console.log("Selected text in Sandbox:", selectedText); // Add this line for debugging
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, [setSelectedText]);
-
-  const handleExecute = async () => {
+  const handleExecute = useCallback(async () => {
     if (!selectedFunction || !sandboxText.trim()) return;
     setIsExecuting(true);
     try {
-      console.log("Executing function:", selectedFunction);
-      console.log("Input:", sandboxText);
       const result = await executeFunction(selectedFunction, sandboxText);
-      console.log("Result:", result);
       if (result) {
-        // Include the function name in the result
         const formattedResult = `### ${selectedFunction}\n\n${result}`;
         setSandboxText(formattedResult);
       }
     } catch (error) {
       console.error("Error executing function:", error);
-      alert(
-        "An error occurred while executing the function. Please try again.",
-      );
+      alert("An error occurred while executing the function. Please try again.");
     } finally {
       setIsExecuting(false);
     }
-  };
+  }, [selectedFunction, sandboxText, executeFunction, setSandboxText]);
 
   const handleClearSandbox = () => {
     setSandboxText("");
@@ -163,12 +144,11 @@ export default function Sandbox({
     onOpenAudioPlayer();
   };
 
-  const handleTextSelection = () => {
+  const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     const selectedText = selection?.toString().trim();
     setSelectedText(selectedText || null);
-    console.log("Selected text:", selectedText);
-  };
+  }, [setSelectedText]);
 
   return (
     <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${

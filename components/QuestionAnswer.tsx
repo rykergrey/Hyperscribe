@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { FaCopy, FaExpand, FaMinus, FaVolumeUp } from "react-icons/fa";
+import { useTextSelection } from "@/hooks/useTextSelection";
 
 export interface QuestionAnswerProps {
   question: string;
@@ -59,14 +60,13 @@ export default function QuestionAnswer({
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
   const [showSuggestedQuestions, setShowSuggestedQuestions] = useState(false);
 
-  const handleAskQuestion = async () => {
+  const handleAskQuestion = useCallback(async () => {
     if (!question.trim() || !rawTranscript.trim()) return;
     setIsAsking(true);
     try {
       const input = `Context: ${rawTranscript}\n\nQuestion: ${question}`;
       const result = await executeFunction("Answer Question", input);
       if (result) {
-        // Remove the function name and any leading newlines
         const newAnswer = result.replace(/^# Answer Question\s*\n+/, "").trim();
         const newEntry = `## Q: ${question}\n\n${newAnswer}\n\n---\n\n`;
         setAnswer((prevAnswer) => newEntry + prevAnswer);
@@ -81,7 +81,7 @@ export default function QuestionAnswer({
       setIsAsking(false);
       setQuestion("");
     }
-  };
+  }, [question, rawTranscript, executeFunction, setAnswer, setQuestion]);
 
   const handleGenerateSuggestedQuestions = async () => {
     setIsGeneratingSuggestions(true);
@@ -203,21 +203,7 @@ export default function QuestionAnswer({
     onOpenAudioPlayer();
   };
 
-  const qaRef = useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection && qaRef.current?.contains(selection.anchorNode)) {
-        const selectedText = selection.toString().trim();
-        setSelectedText(selectedText || null);
-        console.log("Selected text in QuestionAnswer:", selectedText); // Add this line for debugging
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, [setSelectedText]);
+  const qaRef = useTextSelection(setSelectedText);
 
   return (
     <Card
@@ -321,6 +307,7 @@ export default function QuestionAnswer({
               style={{
                 height: isExpanded ? "calc(100vh - 180px)" : `${answerHeight}px`,
                 transition: "height 0.3s ease-in-out",
+                userSelect: 'text',
               }}
             >
               <ReactMarkdown

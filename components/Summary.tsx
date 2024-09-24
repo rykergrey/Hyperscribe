@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaCopy, FaExpand, FaMinus, FaVolumeUp } from "react-icons/fa";
@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { AudioPlayer } from "./AudioPlayer";
+import { useTextSelection } from "@/hooks/useTextSelection";
 
 interface SummaryProps {
   summary: string;
@@ -38,39 +38,13 @@ export default function Summary({
   appendToSandbox,
   isExpanded,
   onExpand,
-  onAddToPlaylist,
   onOpenAudioPlayer,
   setSelectedText,
 }: SummaryProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [voiceId, setVoiceId] = useState("EXAVITQu4vr4xnSDxMaL");
-  const [modelId, setModelId] = useState("eleven_monolingual_v1");
-  const [stability, setStability] = useState(0.5);
-  const [similarityBoost, setSimilarityBoost] = useState(0.75);
-  const [style, setStyle] = useState(0.0);
-  const [speakerBoost, setSpeakerBoost] = useState(true);
-  const [useSpeedup, setUseSpeedup] = useState(0);
-  const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
-  const summaryRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection && summaryRef.current?.contains(selection.anchorNode)) {
-        const selectedText = selection.toString().trim();
-        setSelectedText(selectedText || null);
-        console.log("Selected text in Summary:", selectedText); // Add this line for debugging
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, [setSelectedText]);
+  const summaryRef = useTextSelection(setSelectedText);
 
   const handleGenerateSummary = async (functionName: string) => {
     setIsGenerating(true);
@@ -91,11 +65,9 @@ export default function Summary({
   };
 
   const handleCopy = () => {
-    navigator.clipboard
-      .writeText(summary)
+    navigator.clipboard.writeText(summary)
       .then(() => {
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+        // You can add a temporary "Copied!" message here if desired
       })
       .catch((err) => console.error("Failed to copy: ", err));
   };
@@ -105,11 +77,9 @@ export default function Summary({
   };
 
   const handleSpeak = () => {
+    const textToSpeak = window.getSelection()?.toString().trim() || summary;
+    console.log("Text to be spoken:", textToSpeak);
     onOpenAudioPlayer();
-  };
-
-  const handleCloseAudioPlayer = () => {
-    setShowAudioPlayer(false);
   };
 
   return (
@@ -144,7 +114,6 @@ export default function Summary({
           <Button
             onClick={handleSpeak}
             className="p-2 bg-gray-600 hover:bg-gray-700"
-            disabled={isGeneratingSpeech}
           >
             <FaVolumeUp />
           </Button>
@@ -159,28 +128,7 @@ export default function Summary({
               style={{ height: isExpanded ? "auto" : "320px" }}
             >
               <div className="w-full h-full p-2 bg-gray-700 text-gray-100 border border-gray-600 rounded overflow-auto markdown-content">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code({ node, inline, className, children, ...props }) {
-                      const match = /language-(\w+)/.exec(className || "");
-                      return !inline && match ? (
-                        <SyntaxHighlighter
-                          style={dracula}
-                          language={match[1]}
-                          PreTag="div"
-                          {...props}
-                        >
-                          {String(children).replace(/\n$/, "")}
-                        </SyntaxHighlighter>
-                      ) : (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                  }}
-                >
+                <ReactMarkdown>
                   {summary}
                 </ReactMarkdown>
               </div>

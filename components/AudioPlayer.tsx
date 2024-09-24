@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -36,6 +36,7 @@ interface AudioPlayerProps {
   setAudioState: React.Dispatch<React.SetStateAction<typeof audioState>>;
   audioRef: React.RefObject<HTMLAudioElement>;
   selectedText: string;
+  onReorderPlaylist: (newPlaylist: AudioItem[]) => void;
 }
 
 export function AudioPlayer({ 
@@ -46,70 +47,23 @@ export function AudioPlayer({
   audioState, 
   setAudioState, 
   audioRef, 
-  selectedText 
+  selectedText, 
+  onReorderPlaylist 
 }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentItem, setCurrentItem] = useState<AudioItem | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(-1);
   const [isShuffled, setIsShuffled] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaylistEnded, setIsPlaylistEnded] = useState(false);
+  const [shuffledPlaylist, setShuffledPlaylist] = useState<AudioItem[]>([]);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      const updateAudioState = () => {
-        setAudioState(prevState => ({
-          ...prevState,
-          isPlaying: !audio.paused,
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          volume: audio.volume,
-        }));
-      };
+  const getCurrentPlaylist = useCallback(() => {
+    return isShuffled ? shuffledPlaylist : playlist;
+  }, [isShuffled, shuffledPlaylist, playlist]);
 
-      audio.addEventListener("loadedmetadata", updateAudioState);
-      audio.addEventListener("timeupdate", updateAudioState);
-      audio.addEventListener("play", updateAudioState);
-      audio.addEventListener("pause", updateAudioState);
-      audio.addEventListener("ended", handleAudioEnded);
-
-      return () => {
-        audio.removeEventListener("loadedmetadata", updateAudioState);
-        audio.removeEventListener("timeupdate", updateAudioState);
-        audio.removeEventListener("play", updateAudioState);
-        audio.removeEventListener("pause", updateAudioState);
-        audio.removeEventListener("ended", handleAudioEnded);
-      };
-    }
-  }, []);
-
-  const playNext = () => {
-    if (playlist.length === 0) return;
-    let nextIndex = currentIndex + 1;
-    if (nextIndex >= playlist.length) {
-      if (isRepeating) {
-        nextIndex = 0;
-      } else {
-        setIsPlaylistEnded(true);
-        return;
-      }
-    }
-    playAudio(playlist[nextIndex]);
-  };
-
-  const handleAudioEnded = () => {
-    playNext();
-  };
-
-  const playAudio = (item: AudioItem) => {
+  const playAudio = useCallback((item: AudioItem) => {
     setIsLoading(true);
-    setAudioState(prevState => ({
+    setAudioState((prevState: typeof audioState) => ({
       ...prevState,
       currentItem: item,
       currentIndex: playlist.findIndex(i => i.id === item.id),
@@ -124,6 +78,65 @@ export function AudioPlayer({
         setIsLoading(false);
       });
     }
+  }, [setAudioState, playlist, audioRef]);
+
+  const playNext = useCallback(() => {
+    const currentPlaylist = getCurrentPlaylist();
+    if (currentPlaylist.length === 0) return;
+    let nextIndex = (audioState.currentIndex + 1) % currentPlaylist.length;
+    if (nextIndex === 0 && !isRepeating) {
+      setIsPlaylistEnded(true);
+      return;
+    }
+    playAudio(currentPlaylist[nextIndex]);
+  }, [getCurrentPlaylist, audioState.currentIndex, isRepeating, playAudio]);
+
+  const playPrevious = useCallback(() => {
+    const currentPlaylist = getCurrentPlaylist();
+    if (currentPlaylist.length === 0) return;
+    let prevIndex = (audioState.currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+    playAudio(currentPlaylist[prevIndex]);
+  }, [getCurrentPlaylist, audioState.currentIndex, playAudio]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      const updateAudioState = () => {
+        setAudioState((prevState: typeof audioState) => ({
+          ...prevState,
+          isPlaying: !audio.paused,
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          volume: audio.volume,
+        }));
+      };
+
+      const handleEnded = () => {
+        playNext();
+      };
+
+      const events = ['loadedmetadata', 'timeupdate', 'play', 'pause', 'ended'];
+      events.forEach(event => audio.addEventListener(event, updateAudioState));
+      audio.addEventListener('ended', handleEnded);
+
+      return () => {
+        events.forEach(event => audio.removeEventListener(event, updateAudioState));
+        audio.removeEventListener('ended', handleEnded);
+      };
+    }
+  }, [setAudioState, audioRef, playNext]);
+
+  useEffect(() => {
+    if (isShuffled) {
+      const newShuffledPlaylist = [...playlist].sort(() => Math.random() - 0.5);
+      setShuffledPlaylist(newShuffledPlaylist);
+    } else {
+      setShuffledPlaylist([]);
+    }
+  }, [isShuffled, playlist]);
+
+  const handleAudioEnded = () => {
+    playNext();
   };
 
   const togglePlayPause = () => {
@@ -146,23 +159,14 @@ export function AudioPlayer({
     }
   };
 
-  const playPrevious = () => {
-    if (playlist.length === 0) return;
-    let prevIndex = audioState.currentIndex - 1;
-    if (prevIndex < 0) {
-      prevIndex = playlist.length - 1;
-    }
-    playAudio(playlist[prevIndex]);
-  };
-
   const toggleShuffle = () => {
-    setIsShuffled(!isShuffled);
+    setIsShuffled(prev => !prev);
   };
 
   const toggleRepeat = () => {
-    setIsRepeating(!isRepeating);
+    setIsRepeating(prev => !prev);
     if (isPlaylistEnded) {
-      playAudio(playlist[0]);
+      playNext();
     }
   };
 
@@ -205,6 +209,14 @@ export function AudioPlayer({
     setIsGenerating(false);
   };
 
+  const handleReorder = useCallback((newPlaylist: AudioItem[]) => {
+    onReorderPlaylist(newPlaylist);
+
+    if (isShuffled) {
+      setShuffledPlaylist(newPlaylist);
+    }
+  }, [isShuffled, onReorderPlaylist]);
+
   useEffect(() => {
     console.log("Selected text in AudioPlayer:", selectedText); // Add this line for debugging
   }, [selectedText]);
@@ -220,10 +232,10 @@ export function AudioPlayer({
 
       <div className="mb-4">
         <AudioPlaylist
-          playlist={playlist}
+          playlist={getCurrentPlaylist()}
           currentItem={audioState.currentItem}
           onPlay={playAudio}
-          onDownload={handleDownload}
+          onReorder={handleReorder}
         />
       </div>
 
@@ -259,9 +271,6 @@ export function AudioPlayer({
       </div>
 
       <div className="flex items-center justify-between space-x-2 mb-2">
-        <Button onClick={playPrevious} className="p-2 bg-gray-600 hover:bg-gray-700">
-          ⏮️
-        </Button>
         <Button
           onClick={togglePlayPause}
           className="p-2 bg-blue-600 hover:bg-blue-700"
@@ -278,8 +287,8 @@ export function AudioPlayer({
         <Button onClick={stopAudio} className="p-2 bg-red-600 hover:bg-red-700" disabled={isLoading || !audioRef.current?.src}>
           <FaStop />
         </Button>
-        <Button onClick={playNext} className="p-2 bg-gray-600 hover:bg-gray-700">
-          ⏭️
+        <Button onClick={handleDownload} className="p-2 bg-gray-600 hover:bg-gray-700" disabled={!audioState.currentItem}>
+          <FaDownload />
         </Button>
         <Button onClick={toggleShuffle} className={`p-2 ${isShuffled ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'}`}>
           <FaRandom />
