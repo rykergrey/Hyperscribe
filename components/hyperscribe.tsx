@@ -271,9 +271,15 @@ export default function Hyperscribe() {
         <div className="flex-grow space-y-6">
           <div className="space-y-4">
             <h1 className="text-4xl sm:text-5xl font-extrabold pb-1 leading-none uppercase">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
-                HYPERSCRIBE.AI
-              </span>
+            <span style={{
+  background: 'linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  color: '#3b82f6', // Fallback color
+  display: 'inline-block'
+}}>
+  HYPERSCRIBE.AI
+</span>
             </h1>
 
             <Card className="bg-gray-800 border-none shadow-lg shadow-purple-500/20">
