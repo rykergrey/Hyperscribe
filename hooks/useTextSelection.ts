@@ -1,33 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-export function useTextSelection(onTextSelect: (text: string | null) => void) {
+export function useTextSelection(setSelectedText: (text: string | null) => void) {
   const ref = useRef<HTMLDivElement>(null);
-  const [selectedText, setSelectedText] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleSelectionChange = () => {
+    const handleSelection = () => {
       const selection = window.getSelection();
-      if (selection && (ref.current?.contains(selection.anchorNode) || ref.current?.contains(selection.focusNode))) {
-        const text = selection.toString().trim();
-        if (text !== selectedText) {
-          setSelectedText(text);
-          onTextSelect(text || null);
-        }
-      }
+      const selectedText = selection?.toString().trim();
+      setSelectedText(selectedText || null);
     };
 
-    const handleMouseUp = () => {
-      setTimeout(handleSelectionChange, 10); // Small delay to ensure selection is complete
-    };
-
-    document.addEventListener('selectionchange', handleSelectionChange);
-    document.addEventListener('mouseup', handleMouseUp);
+    const element = ref.current;
+    if (element) {
+      element.addEventListener('mouseup', handleSelection);
+      element.addEventListener('touchend', handleSelection);
+    }
 
     return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-      document.removeEventListener('mouseup', handleMouseUp);
+      if (element) {
+        element.removeEventListener('mouseup', handleSelection);
+        element.removeEventListener('touchend', handleSelection);
+      }
     };
-  }, [onTextSelect, selectedText]);
+  }, [setSelectedText]);
 
   return ref;
 }

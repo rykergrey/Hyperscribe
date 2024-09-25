@@ -35,8 +35,7 @@ export default function Hyperscribe() {
   const [answer, setAnswer] = useState("");
   const [sandboxText, setSandboxText] = useState("");
   const [selectedFunction, setSelectedFunction] = useState("");
-  const [functions, setFunctions] =
-    useState<Record<string, AIFunction>>(defaultFunctions);
+  const [functions, setFunctions] = useState<Record<string, any>>({});
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   const [expandedComponent, setExpandedComponent] = useState<string | null>(
@@ -268,21 +267,11 @@ export default function Hyperscribe() {
       <div className="gradient-container">
         <div className="absolute inset-0 bg-gradient-animation"></div>
       </div>
-      <div className="relative z-10 container mx-auto p-4">
-        <div className="container mx-auto space-y-6">
-          <div className="space-y-0">
+      <div className="relative z-10 container mx-auto p-4 flex flex-col min-h-screen">
+        <div className="flex-grow space-y-6">
+          <div className="space-y-4">
             <h1 className="text-4xl sm:text-5xl font-extrabold pb-1 leading-none uppercase">
-              <span
-                style={{
-                  background:
-                    "linear-gradient(90deg, #3B82F6, #B794F4, #F7F7F7, #FBD38D)",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                  display: "inline-block",
-                  textShadow: "none",
-                }}
-              >
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
                 HYPERSCRIBE.AI
               </span>
             </h1>
@@ -325,68 +314,56 @@ export default function Hyperscribe() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2"> {/* Changed from gap-6 to gap-2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
             <RawTranscript
               rawTranscript={rawTranscript}
               setRawTranscript={setRawTranscript}
               appendToSandbox={appendToSandbox}
               isExpanded={expandedComponent === "rawTranscript"}
-              onExpand={() =>
-                setExpandedComponent(
-                  expandedComponent === "rawTranscript" ? null : "rawTranscript"
-                )
-              }
+              onExpand={() => setExpandedComponent(expandedComponent === "rawTranscript" ? null : "rawTranscript")}
               setSelectedText={handleSetSelectedText}
             />
-            <Summary
-              summary={summary}
-              setSummary={setSummary}
-              rawTranscript={rawTranscript}
-              executeFunction={handleExecuteFunction}
-              appendToSandbox={appendToSandbox}
-              isExpanded={expandedComponent === "summary"}
-              onExpand={() =>
-                setExpandedComponent(
-                  expandedComponent === "summary" ? null : "summary"
-                )
-              }
-              onOpenAudioPlayer={handleOpenAudioPlayer}
-              setSelectedText={handleSetSelectedText}
-            />
-            <QuestionAnswer
-              question={question}
-              setQuestion={setQuestion}
-              answer={answer}
-              setAnswer={setAnswer}
-              rawTranscript={rawTranscript}
-              executeFunction={handleExecuteFunction}
-              appendToSandbox={appendToSandbox}
-              isExpanded={expandedComponent === "questionAnswer"}
-              onExpand={() =>
-                setExpandedComponent(
-                  expandedComponent === "questionAnswer" ? null : "questionAnswer"
-                )
-              }
-              onOpenAudioPlayer={handleOpenAudioPlayer}
-              setSelectedText={handleSetSelectedText}
-            />
-            <Sandbox
-              sandboxText={sandboxText}
-              setSandboxText={setSandboxText}
-              selectedFunction={selectedFunction}
-              setSelectedFunction={setSelectedFunction}
-              functions={functions}
-              setFunctions={setFunctions}
-              executeFunction={handleExecuteFunction}
-              isExpanded={expandedComponent === "sandbox"}
-              onExpand={() =>
-                setExpandedComponent(
-                  expandedComponent === "sandbox" ? null : "sandbox"
-                )
-              }
-              onOpenAudioPlayer={handleOpenAudioPlayer}
-              setSelectedText={handleSetSelectedText}
-            />
+            {expandedComponent !== "rawTranscript" && (
+              <>
+                <Summary
+                  summary={summary}
+                  setSummary={setSummary}
+                  rawTranscript={rawTranscript}
+                  executeFunction={handleExecuteFunction}
+                  appendToSandbox={appendToSandbox}
+                  isExpanded={expandedComponent === "summary"}
+                  onExpand={() => setExpandedComponent(expandedComponent === "summary" ? null : "summary")}
+                  onOpenAudioPlayer={handleOpenAudioPlayer}
+                  setSelectedText={handleSetSelectedText}
+                />
+                <QuestionAnswer
+                  question={question}
+                  setQuestion={setQuestion}
+                  answer={answer}
+                  setAnswer={setAnswer}
+                  rawTranscript={rawTranscript}
+                  executeFunction={handleExecuteFunction}
+                  appendToSandbox={appendToSandbox}
+                  isExpanded={expandedComponent === "questionAnswer"}
+                  onExpand={() => setExpandedComponent(expandedComponent === "questionAnswer" ? null : "questionAnswer")}
+                  setSelectedText={handleSetSelectedText}
+                  onOpenAudioPlayer={handleOpenAudioPlayer}
+                />
+                <Sandbox
+                  sandboxText={sandboxText}
+                  setSandboxText={setSandboxText}
+                  selectedFunction={selectedFunction}
+                  setSelectedFunction={setSelectedFunction}
+                  functions={functions}
+                  setFunctions={setFunctions}
+                  executeFunction={handleExecuteFunction}
+                  isExpanded={expandedComponent === "sandbox"}
+                  onExpand={() => setExpandedComponent(expandedComponent === "sandbox" ? null : "sandbox")}
+                  setSelectedText={handleSetSelectedText}
+                  onOpenAudioPlayer={handleOpenAudioPlayer}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

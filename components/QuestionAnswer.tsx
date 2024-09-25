@@ -7,7 +7,8 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { FaCopy, FaExpand, FaMinus, FaPlus, FaVolumeUp } from "react-icons/fa";
-import { useTextSelection } from "@/hooks/useTextSelection";
+import SharedComponentWrapper from "@/components/SharedComponentWrapper";
+import { useTextSelection } from "@/hooks/useTextSelection"; // Add this line
 
 export interface QuestionAnswerProps {
   question: string;
@@ -39,27 +40,12 @@ export default function QuestionAnswer({
   onExpand,
   onOpenAudioPlayer,
 }: QuestionAnswerProps) {
-  const [answerHeight, setAnswerHeight] = useState(320);
-  const [isResizing, setIsResizing] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
   const [copiedFeedback, setCopiedFeedback] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const defaultHeight = 320;
-  const minimizedHeight = 0.1; // Height when minimized
-
-  const answerRef = useTextSelection(setSelectedText);
-
-  const handleSendToSandbox = () => {
-    if (answerRef.current) {
-      const selection = window.getSelection();
-      const selectedText = selection?.toString() || "";
-      appendToSandbox(selectedText || answer);
-    }
-  };
-
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [showSuggestQuestionsPanel, setShowSuggestQuestionsPanel] = useState(false);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
-  const [showSuggestedQuestions, setShowSuggestedQuestions] = useState(false);
+  const answerRef = useTextSelection(setSelectedText);
 
   const handleAskQuestion = useCallback(async () => {
     if (!question.trim() || !rawTranscript.trim()) return;
@@ -87,104 +73,27 @@ export default function QuestionAnswer({
   const handleGenerateSuggestedQuestions = async () => {
     setIsGeneratingSuggestions(true);
     try {
-      console.log("Generating suggested questions...");
-      const result = await executeFunction(
-        "Generate Suggested Questions",
-        rawTranscript,
-      );
-      console.log("Result:", result);
+      const result = await executeFunction("Generate Suggested Questions", rawTranscript);
       if (result) {
-        const questionsWithoutHeader = result.replace(
-          /^# Generate Suggested Questions\n\n/,
-          "",
-        );
-        const questions = questionsWithoutHeader
-          .split("\n")
-          .filter((q) => q.trim());
-        console.log("Parsed questions:", questions);
+        const questions = result.split('\n').filter(q => q.trim() !== '').slice(0, 5);
         setSuggestedQuestions(questions);
       } else {
-        console.log("No result returned from executeFunction");
-        setSuggestedQuestions([
-          "No suggested questions generated. Please try again.",
-        ]);
+        setSuggestedQuestions(["Failed to generate suggested questions."]);
       }
     } catch (error) {
       console.error("Error generating suggested questions:", error);
-      setSuggestedQuestions([
-        "An error occurred while generating questions. Please try again.",
-      ]);
+      setSuggestedQuestions(["Error: Failed to generate suggested questions."]);
     } finally {
       setIsGeneratingSuggestions(false);
     }
   };
 
-  const handleBarClick = (e: React.MouseEvent) => {
-    if (isResizing) return;
-    setIsMinimized(!isMinimized);
-    setAnswerHeight(isMinimized ? defaultHeight : minimizedHeight);
+  const handleSelectSuggestedQuestion = (q: string) => {
+    setQuestion(q);
+    setShowSuggestQuestionsPanel(false);
   };
 
-  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsResizing(true);
-    e.preventDefault();
-  };
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent | TouchEvent) => {
-      if (!isResizing) return;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-      const newHeight =
-        clientY - (answerRef.current?.getBoundingClientRect().top || 0);
-      setAnswerHeight(Math.max(newHeight, minimizedHeight));
-      setIsMinimized(newHeight <= minimizedHeight);
-    },
-    [isResizing],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
-  }, []);
-
-  React.useEffect(() => {
-    if (isResizing) {
-      window.addEventListener(
-        "mousemove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.addEventListener(
-        "touchmove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.addEventListener("mouseup", handleMouseUp);
-      window.addEventListener("touchend", handleMouseUp);
-    } else {
-      window.removeEventListener(
-        "mousemove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.removeEventListener(
-        "touchmove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchend", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener(
-        "mousemove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.removeEventListener(
-        "touchmove",
-        handleMouseMove as (e: Event) => void,
-      );
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchend", handleMouseUp);
-    };
-  }, [isResizing, handleMouseMove, handleMouseUp]);
-
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     if (typeof window !== 'undefined') {
       const tempInput = document.createElement('textarea');
       tempInput.value = answer;
@@ -195,10 +104,14 @@ export default function QuestionAnswer({
       setCopiedFeedback(true);
       setTimeout(() => setCopiedFeedback(false), 2000);
     }
-  };
+  }, [answer]);
 
-  const handleMinimize = () => {
-    setIsMinimized(!isMinimized);
+  const handleSendToSandbox = () => {
+    if (answerRef.current) {
+      const selection = window.getSelection();
+      const selectedText = selection?.toString() || "";
+      appendToSandbox(selectedText || answer);
+    }
   };
 
   const handleSpeak = () => {
@@ -208,114 +121,97 @@ export default function QuestionAnswer({
   };
 
   return (
-    <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg overflow-hidden ${
-      isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''
-    } ${isMinimized ? 'h-[64px]' : ''}`}>
-      <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-gray-800 z-10 p-3">
-        <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
+    <SharedComponentWrapper
+      title="Q&A"
+      onCopy={handleCopy}
+      onExpand={onExpand}
+      isExpanded={isExpanded}
+      copiedFeedback={copiedFeedback}
+      onSpeak={handleSpeak}
+    >
+      <div className="flex flex-col h-full space-y-2">
+        <Input
+          type="text"
+          placeholder="Ask a question..."
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          className="bg-gray-700 text-gray-100 border-gray-600 py-2"
+        />
         <div className="flex space-x-2">
           <Button
-            onClick={handleCopy}
-            className={`p-2 ${copiedFeedback ? 'bg-green-600' : 'bg-gray-600'} hover:bg-gray-700`}
+            onClick={handleAskQuestion}
+            className="bg-purple-600 hover:bg-purple-700 flex-grow py-2"
+            disabled={isAsking}
           >
-            {copiedFeedback ? 'Copied!' : <FaCopy />}
+            {isAsking ? "Asking..." : "Ask"}
           </Button>
           <Button
-            onClick={handleMinimize}
-            className="p-2 bg-gray-600 hover:bg-gray-700"
+            onClick={() => setShowSuggestQuestionsPanel(!showSuggestQuestionsPanel)}
+            className="bg-blue-600 hover:bg-blue-700 flex-grow py-2"
           >
-            {isMinimized ? <FaPlus /> : <FaMinus />}
+            {showSuggestQuestionsPanel ? "Hide Suggestions" : "Suggested"}
           </Button>
-          <Button
-            onClick={onExpand}
-            className="p-2 bg-gray-600 hover:bg-gray-700"
-          >
-            <FaExpand />
-          </Button>
-          <Button
-            onClick={handleSpeak}
-            className="p-2 bg-gray-600 hover:bg-gray-700"
-          >
-            <FaVolumeUp />
-          </Button>
-        </div>
-      </CardHeader>
-      <div className={`transition-all duration-300 ${isMinimized ? 'h-0 overflow-hidden' : 'h-auto'}`}>
-        <CardContent className={`${isExpanded ? 'p-4 md:p-8' : 'p-3'}`}>
-          <div className="flex flex-col space-y-2">
-            <Input
-              type="text"
-              placeholder="Ask a question..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              className="bg-gray-700 text-gray-100 border-gray-600"
-            />
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleAskQuestion}
-                className="bg-purple-600 hover:bg-purple-700 flex-grow"
-                disabled={isAsking}
-              >
-                {isAsking ? "Asking..." : "Ask"}
-              </Button>
-              <Button
-                onClick={handleGenerateSuggestedQuestions}
-                className="bg-blue-600 hover:bg-blue-700 flex-grow"
-                disabled={isGeneratingSuggestions}
-              >
-                {isGeneratingSuggestions ? "Generating..." : "Suggest Questions"}
-              </Button>
-            </div>
-          </div>
-          {showSuggestedQuestions && (
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-200">Suggested Questions:</h3>
-              <ul className="list-disc list-inside space-y-1">
-                {suggestedQuestions.map((q, index) => (
-                  <li key={index} className="text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => setQuestion(q)}>
-                    {q}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div
-            ref={answerRef}
-            className="w-full h-64 p-2 bg-gray-700 text-gray-100 border border-gray-600 rounded overflow-auto markdown-content"
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({ node, inline, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={dracula}
-                      language={match[1]}
-                      PreTag="div"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, "")}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {answer}
-            </ReactMarkdown>
-          </div>
           <Button
             onClick={handleSendToSandbox}
-            className="bg-orange-600 hover:bg-orange-700 w-full"
+            className="bg-orange-600 hover:bg-orange-700 flex-grow py-2"
           >
             Send to Sandbox
           </Button>
-        </CardContent>
+        </div>
+        
+        {showSuggestQuestionsPanel && (
+          <div className="p-2 bg-gray-800 rounded-lg">
+            <Button
+              onClick={handleGenerateSuggestedQuestions}
+              className="bg-green-600 hover:bg-green-700 w-full py-2 mb-2"
+              disabled={isGeneratingSuggestions}
+            >
+              {isGeneratingSuggestions ? "Generating..." : "Generate Suggested Questions"}
+            </Button>
+            <div className="space-y-2">
+              {suggestedQuestions.map((q, index) => (
+                <Button
+                  key={index}
+                  onClick={() => handleSelectSuggestedQuestion(q)}
+                  className="bg-gray-700 hover:bg-gray-600 text-left w-full py-6 px-3 whitespace-normal break-words"
+                >
+                  {q}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div
+          ref={answerRef}
+          className="flex-grow overflow-auto p-4 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg markdown-content"
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={dracula}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {answer}
+          </ReactMarkdown>
+        </div>
       </div>
-    </Card>
+    </SharedComponentWrapper>
   );
 }
