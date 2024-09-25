@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { FaArrowUp, FaArrowDown, FaTimes, FaDownload } from "react-icons/fa";
 
 interface AudioItem {
   id: string;
@@ -13,6 +13,8 @@ interface AudioPlaylistProps {
   currentItem: AudioItem | null;
   onPlay: (item: AudioItem) => void;
   onReorder: (newPlaylist: AudioItem[]) => void;
+  onRemove: (item: AudioItem) => void;
+  onDownload: (item: AudioItem) => void;  // Add this new prop
 }
 
 export function AudioPlaylist({
@@ -20,6 +22,8 @@ export function AudioPlaylist({
   currentItem,
   onPlay,
   onReorder,
+  onRemove,
+  onDownload,  // Add this new prop
 }: AudioPlaylistProps) {
   const moveItem = (index: number, direction: "up" | "down") => {
     const newPlaylist = Array.from(playlist);
@@ -58,6 +62,18 @@ export function AudioPlaylist({
               disabled={index === playlist.length - 1}
             >
               <FaArrowDown />
+            </Button>
+            <Button
+              onClick={() => onDownload(item)}
+              className="p-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <FaDownload />
+            </Button>
+            <Button
+              onClick={() => onRemove(item)}
+              className="p-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              <FaTimes />
             </Button>
           </div>
         </div>

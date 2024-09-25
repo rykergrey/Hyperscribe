@@ -58,11 +58,9 @@ export default function Hyperscribe() {
   const [selectedText, setSelectedText] = useState<string | null>(null);
 
   const handleSetSelectedText = useCallback((text: string | null) => {
-    console.log("Selected text in Hyperscribe:", text); // Add this line for debugging
+    console.log("Selected text in Hyperscribe:", text);
     setSelectedText(text);
   }, []);
-
-  const textSelectionRef = useTextSelection(handleSetSelectedText);
 
   useEffect(() => {
     const fetchFunctions = async () => {
@@ -266,13 +264,13 @@ export default function Hyperscribe() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden relative" ref={textSelectionRef}>
+    <div className="min-h-screen overflow-hidden relative">
       <div className="gradient-container">
         <div className="absolute inset-0 bg-gradient-animation"></div>
       </div>
       <div className="relative z-10 container mx-auto p-4">
         <div className="container mx-auto space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-0">
             <h1 className="text-4xl sm:text-5xl font-extrabold pb-1 leading-none uppercase">
               <span
                 style={{
@@ -327,7 +325,7 @@ export default function Hyperscribe() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2"> {/* Changed from gap-6 to gap-2 */}
             <RawTranscript
               rawTranscript={rawTranscript}
               setRawTranscript={setRawTranscript}
@@ -338,6 +336,7 @@ export default function Hyperscribe() {
                   expandedComponent === "rawTranscript" ? null : "rawTranscript"
                 )
               }
+              setSelectedText={handleSetSelectedText}
             />
             <Summary
               summary={summary}
@@ -352,7 +351,6 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
-              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
             <QuestionAnswer
@@ -370,7 +368,6 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
-              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
             <Sandbox
@@ -388,7 +385,6 @@ export default function Hyperscribe() {
                 )
               }
               onOpenAudioPlayer={handleOpenAudioPlayer}
-              selectedText={selectedText}
               setSelectedText={handleSetSelectedText}
             />
           </div>

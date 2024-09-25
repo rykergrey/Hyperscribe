@@ -186,7 +186,7 @@ export function AudioPlayer({
     }
   };
 
-  const handleDownload = (item: AudioItem) => {
+  const handleDownload = useCallback((item: AudioItem) => {
     const url = URL.createObjectURL(item.blob);
     const a = document.createElement("a");
     a.href = url;
@@ -195,7 +195,7 @@ export function AudioPlayer({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  }, []);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -221,6 +221,20 @@ export function AudioPlayer({
     console.log("Selected text in AudioPlayer:", selectedText); // Add this line for debugging
   }, [selectedText]);
 
+  const handleRemoveFromPlaylist = useCallback((itemToRemove: AudioItem) => {
+    const newPlaylist = playlist.filter(item => item.id !== itemToRemove.id);
+    onReorderPlaylist(newPlaylist);
+
+    if (isShuffled) {
+      setShuffledPlaylist(prev => prev.filter(item => item.id !== itemToRemove.id));
+    }
+
+    if (audioState.currentItem?.id === itemToRemove.id) {
+      stopAudio();
+      setAudioState(prev => ({ ...prev, currentItem: null }));
+    }
+  }, [playlist, isShuffled, audioState.currentItem, onReorderPlaylist, stopAudio]);
+
   return (
     <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg z-50 w-80 text-white border border-gray-700 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
       <div className="flex items-center justify-between mb-2">
@@ -236,6 +250,8 @@ export function AudioPlayer({
           currentItem={audioState.currentItem}
           onPlay={playAudio}
           onReorder={handleReorder}
+          onRemove={handleRemoveFromPlaylist}
+          onDownload={handleDownload}
         />
       </div>
 

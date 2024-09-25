@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { FaCopy, FaExpand, FaMinus, FaVolumeUp } from "react-icons/fa";
+import { FaCopy, FaExpand, FaMinus, FaPlus, FaVolumeUp } from "react-icons/fa";
 import { useTextSelection } from "@/hooks/useTextSelection";
 
 export interface QuestionAnswerProps {
@@ -39,14 +39,15 @@ export default function QuestionAnswer({
   onExpand,
   onOpenAudioPlayer,
 }: QuestionAnswerProps) {
-  const answerRef = useRef<HTMLDivElement>(null);
   const [answerHeight, setAnswerHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const defaultHeight = 320;
   const minimizedHeight = 0.1; // Height when minimized
+
+  const answerRef = useTextSelection(setSelectedText);
 
   const handleSendToSandbox = () => {
     if (answerRef.current) {
@@ -184,13 +185,16 @@ export default function QuestionAnswer({
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const handleCopy = () => {
-    navigator.clipboard
-      .writeText(answer)
-      .then(() => {
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-      })
-      .catch((err) => console.error("Failed to copy: ", err));
+    if (typeof window !== 'undefined') {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = answer;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      setCopiedFeedback(true);
+      setTimeout(() => setCopiedFeedback(false), 2000);
+    }
   };
 
   const handleMinimize = () => {
@@ -203,30 +207,24 @@ export default function QuestionAnswer({
     onOpenAudioPlayer();
   };
 
-  const qaRef = useTextSelection(setSelectedText);
-
   return (
-    <Card
-      className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
-        isExpanded ? "fixed inset-0 z-50 m-0 rounded-none overflow-auto" : ""
-      }`}
-    >
-      <CardHeader className={`flex flex-row items-center justify-between sticky top-0 bg-transparent z-10 ${
-        isExpanded ? 'p-2' : ''
-      }`}>
+    <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg overflow-hidden ${
+      isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''
+    } ${isMinimized ? 'h-[64px]' : ''}`}>
+      <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-gray-800 z-10 p-3">
         <CardTitle className="text-2xl font-bold text-blue-400">Q&A</CardTitle>
         <div className="flex space-x-2">
           <Button
             onClick={handleCopy}
-            className="p-2 bg-gray-600 hover:bg-gray-700"
+            className={`p-2 ${copiedFeedback ? 'bg-green-600' : 'bg-gray-600'} hover:bg-gray-700`}
           >
-            <FaCopy />
+            {copiedFeedback ? 'Copied!' : <FaCopy />}
           </Button>
           <Button
             onClick={handleMinimize}
             className="p-2 bg-gray-600 hover:bg-gray-700"
           >
-            <FaMinus />
+            {isMinimized ? <FaPlus /> : <FaMinus />}
           </Button>
           <Button
             onClick={onExpand}
@@ -242,130 +240,82 @@ export default function QuestionAnswer({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`space-y-4 ${isExpanded ? 'pt-0 px-2' : ''}`}>
-        {!isMinimized && (
-          <>
-            <div className={`space-y-4 ${isExpanded ? 'lg:space-y-0 lg:flex lg:items-center lg:space-x-2' : ''}`}>
-              <Input
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                className={`bg-gray-700 border-gray-600 text-gray-100 w-full ${isExpanded ? 'lg:flex-grow' : ''}`}
-                placeholder="Enter your question here..."
-              />
-              <div className={`grid grid-cols-3 gap-2 ${isExpanded ? 'lg:flex lg:space-x-2' : ''}`}>
-                <Button
-                  onClick={handleAskQuestion}
-                  className="bg-purple-600 hover:bg-purple-700 w-full"
-                  disabled={isAsking || !question.trim()}
-                >
-                  {isAsking ? "Asking..." : "Ask Question"}
-                </Button>
-                <Button
-                  onClick={() => setShowSuggestedQuestions(!showSuggestedQuestions)}
-                  className="bg-pink-600 hover:bg-pink-700 w-full"
-                >
-                  Suggested Questions
-                </Button>
-                <Button
-                  onClick={handleSendToSandbox}
-                  className="bg-orange-600 hover:bg-orange-700 relative isolate group w-full"
-                >
-                  <span className="pointer-events-none absolute inset-x-0 bottom-full mb-2 flex items-center justify-center">
-                    <span className="bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                      Highlight text to send only that selection
-                    </span>
-                  </span>
-                  Send to Sandbox
-                </Button>
-              </div>
+      <div className={`transition-all duration-300 ${isMinimized ? 'h-0 overflow-hidden' : 'h-auto'}`}>
+        <CardContent className={`${isExpanded ? 'p-4 md:p-8' : 'p-3'}`}>
+          <div className="flex flex-col space-y-2">
+            <Input
+              type="text"
+              placeholder="Ask a question..."
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              className="bg-gray-700 text-gray-100 border-gray-600"
+            />
+            <div className="flex space-x-2">
+              <Button
+                onClick={handleAskQuestion}
+                className="bg-purple-600 hover:bg-purple-700 flex-grow"
+                disabled={isAsking}
+              >
+                {isAsking ? "Asking..." : "Ask"}
+              </Button>
+              <Button
+                onClick={handleGenerateSuggestedQuestions}
+                className="bg-blue-600 hover:bg-blue-700 flex-grow"
+                disabled={isGeneratingSuggestions}
+              >
+                {isGeneratingSuggestions ? "Generating..." : "Suggest Questions"}
+              </Button>
             </div>
-            {showSuggestedQuestions && (
-              <div className="p-4 space-y-2 border border-gray-600 rounded-md bg-gray-700">
-                <Button
-                  onClick={handleGenerateSuggestedQuestions}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  disabled={isGeneratingSuggestions}
-                >
-                  {isGeneratingSuggestions
-                    ? "Generating..."
-                    : "Generate Suggested Questions"}
-                </Button>
+          </div>
+          {showSuggestedQuestions && (
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-200">Suggested Questions:</h3>
+              <ul className="list-disc list-inside space-y-1">
                 {suggestedQuestions.map((q, index) => (
-                  <div
-                    key={index}
-                    className="p-2 bg-gray-600 rounded cursor-pointer hover:bg-gray-500 transition-colors text-white"
-                    onClick={() => setQuestion(q)}
-                  >
+                  <li key={index} className="text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => setQuestion(q)}>
                     {q}
-                  </div>
+                  </li>
                 ))}
-              </div>
-            )}
-            <div
-              ref={qaRef}
-              className="relative w-full p-2 bg-gray-700 border-gray-600 text-gray-100 rounded overflow-auto markdown-content"
-              style={{
-                height: isExpanded ? "calc(100vh - 180px)" : `${answerHeight}px`,
-                transition: "height 0.3s ease-in-out",
-                userSelect: 'text',
+              </ul>
+            </div>
+          )}
+          <div
+            ref={answerRef}
+            className="w-full h-64 p-2 bg-gray-700 text-gray-100 border border-gray-600 rounded overflow-auto markdown-content"
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({ node, inline, className, children, ...props }) {
+                  const match = /language-(\w+)/.exec(className || "");
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      style={dracula}
+                      language={match[1]}
+                      PreTag="div"
+                      {...props}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
               }}
             >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h2: ({ node, ...props }) => (
-                    <h2
-                      className="text-xl font-bold mt-4 mb-2 text-blue-400 bg-gray-800 p-3 rounded-t-lg"
-                      {...props}
-                    />
-                  ),
-                  p: ({ node, ...props }) => <p className="mb-2" {...props} />,
-                  ul: ({ node, ...props }) => (
-                    <ul className="list-disc list-inside mb-2" {...props} />
-                  ),
-                  ol: ({ node, ...props }) => (
-                    <ol className="list-decimal list-inside mb-2" {...props} />
-                  ),
-                  li: ({ node, ...props }) => (
-                    <li className="ml-4" {...props} />
-                  ),
-                  a: ({ node, ...props }) => (
-                    <a className="text-blue-400 hover:underline" {...props} />
-                  ),
-                  blockquote: ({ node, ...props }) => (
-                    <blockquote
-                      className="border-l-4 border-gray-500 pl-4 italic my-2"
-                      {...props}
-                    />
-                  ),
-                  code({ node, inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={dracula}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  hr: ({ node, ...props }) => (
-                    <hr className="my-4 border-t border-gray-600" {...props} />
-                  ),
-                }}
-              >
-                {answer}
-              </ReactMarkdown>
-            </div>
-          </>
-        )}
-      </CardContent>
+              {answer}
+            </ReactMarkdown>
+          </div>
+          <Button
+            onClick={handleSendToSandbox}
+            className="bg-orange-600 hover:bg-orange-700 w-full"
+          >
+            Send to Sandbox
+          </Button>
+        </CardContent>
+      </div>
     </Card>
   );
 }

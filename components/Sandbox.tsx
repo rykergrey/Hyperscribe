@@ -20,9 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FaCopy, FaExpand, FaMinus, FaList } from 'react-icons/fa';
+import { FaCopy, FaExpand, FaMinus, FaPlus, FaList, FaVolumeUp } from 'react-icons/fa';
 import { SandboxQueue } from "./SandboxQueue";
-import { FaVolumeUp } from 'react-icons/fa';
 import { AudioPlayer } from "./AudioPlayer";
 import { useTextSelection } from "@/hooks/useTextSelection";
 
@@ -72,6 +71,7 @@ export default function Sandbox({
   const [isCopied, setIsCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showSandboxQueue, setShowSandboxQueue] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   const sandboxRef = useTextSelection(setSelectedText);
 
@@ -98,12 +98,16 @@ export default function Sandbox({
   };
 
   const copyContent = () => {
-    navigator.clipboard.writeText(sandboxText)
-      .then(() => {
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
-      })
-      .catch(err => console.error('Failed to copy: ', err));
+    if (typeof window !== 'undefined') {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = sandboxText;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      setCopiedFeedback(true);
+      setTimeout(() => setCopiedFeedback(false), 2000);
+    }
   };
 
   const handleMinimize = () => {
@@ -151,21 +155,19 @@ export default function Sandbox({
   }, [setSelectedText]);
 
   return (
-    <Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg ${
-      isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none overflow-auto' : ''
-    }`}>
-      <CardHeader className={`flex flex-row items-center justify-between sticky top-0 bg-transparent z-10 ${
-        isExpanded ? 'p-2' : ''
-      }`}>
+<Card className={`bg-gray-800 border-none shadow-lg shadow-purple-500/20 transition-all duration-300 rounded-lg overflow-hidden ${
+  isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''
+} ${isMinimized ? 'h-[64px] mb-2' : 'mb-4'}`}>
+      <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-gray-800 z-10 p-3">
         <CardTitle className="text-2xl font-bold text-blue-400">
           Sandbox
         </CardTitle>
         <div className="flex space-x-2">
           <Button
             onClick={copyContent}
-            className="p-2 bg-gray-600 hover:bg-gray-700"
+            className={`p-2 ${copiedFeedback ? 'bg-green-600' : 'bg-gray-600'} hover:bg-gray-700`}
           >
-            <FaCopy />
+            {copiedFeedback ? 'Copied!' : <FaCopy />}
           </Button>
           <Button
             onClick={() => setShowSandboxQueue(!showSandboxQueue)}
@@ -177,7 +179,7 @@ export default function Sandbox({
             onClick={handleMinimize}
             className="p-2 bg-gray-600 hover:bg-gray-700"
           >
-            <FaMinus />
+            {isMinimized ? <FaPlus /> : <FaMinus />}
           </Button>
           <Button
             onClick={onExpand}
@@ -193,34 +195,85 @@ export default function Sandbox({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`space-y-4 ${isExpanded ? 'pt-0 px-2' : ''}`}>
-        {!isMinimized && (
-          <>
-            <div className={`flex ${isExpanded ? 'flex-row items-center space-x-2' : 'flex-col space-y-2'}`}>
-              <Select value={selectedFunction} onValueChange={setSelectedFunction} className={isExpanded ? 'flex-grow' : 'w-full'}>
-                <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100 w-full">
-                  <SelectValue placeholder="Select function" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(functions).map((funcName) => (
-                    <SelectItem key={funcName} value={funcName}>
-                      {funcName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isExpanded && (
-                <>
+      <div className={`transition-all duration-300 ${isMinimized ? 'h-0 overflow-hidden' : 'h-auto'}`}>
+        <CardContent className={`space-y-4 ${isExpanded ? 'p-4 md:p-8' : 'p-3'}`}>
+          {!isMinimized && (
+            <>
+              <div className={`flex ${isExpanded ? 'flex-row items-center space-x-2' : 'flex-col space-y-2'}`}>
+                <Select value={selectedFunction} onValueChange={setSelectedFunction} className={isExpanded ? 'flex-grow' : 'w-full'}>
+                  <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100 w-full">
+                    <SelectValue placeholder="Select function" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(functions).map((funcName) => (
+                      <SelectItem key={funcName} value={funcName}>
+                        {funcName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isExpanded && (
+                  <>
+                    <Button
+                      onClick={handleExecute}
+                      className="bg-purple-600 hover:bg-purple-700"
+                      disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
+                    >
+                      {isExecuting ? "Executing..." : "Execute"}
+                    </Button>
+                    <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-red-600 hover:bg-red-700">
+                          Clear
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-gray-800 text-gray-100">
+                        <DialogHeader>
+                          <DialogTitle>Clear Sandbox</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to clear the sandbox? This action
+                            cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button
+                            onClick={() => setShowClearDialog(false)}
+                            className="bg-gray-600 hover:bg-gray-700"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleClearSandbox}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Clear
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
+              </div>
+              {!isExpanded && (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={handleExecute}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-purple-600 hover:bg-purple-700 flex-grow"
                     disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
                   >
                     {isExecuting ? "Executing..." : "Execute"}
                   </Button>
+                  {showManageFunctionsButton && (
+                    <Button
+                      onClick={() => setShowManageFunctions(!showManageFunctions)}
+                      className="bg-blue-600 hover:bg-blue-700 flex-grow"
+                    >
+                      {showManageFunctions ? "Close Manager" : "Manage Functions"}
+                    </Button>
+                  )}
                   <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
                     <DialogTrigger asChild>
-                      <Button className="bg-red-600 hover:bg-red-700">
+                      <Button className="bg-red-600 hover:bg-red-700 flex-grow">
                         Clear
                       </Button>
                     </DialogTrigger>
@@ -248,96 +301,47 @@ export default function Sandbox({
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                </>
+                </div>
               )}
-            </div>
-            {!isExpanded && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={handleExecute}
-                  className="bg-purple-600 hover:bg-purple-700 flex-grow"
-                  disabled={isExecuting || !selectedFunction || !sandboxText.trim()}
-                >
-                  {isExecuting ? "Executing..." : "Execute"}
-                </Button>
-                {showManageFunctionsButton && (
-                  <Button
-                    onClick={() => setShowManageFunctions(!showManageFunctions)}
-                    className="bg-blue-600 hover:bg-blue-700 flex-grow"
-                  >
-                    {showManageFunctions ? "Close Manager" : "Manage Functions"}
-                  </Button>
-                )}
-                <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-red-600 hover:bg-red-700 flex-grow">
-                      Clear
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-gray-800 text-gray-100">
-                    <DialogHeader>
-                      <DialogTitle>Clear Sandbox</DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to clear the sandbox? This action
-                        cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button
-                        onClick={() => setShowClearDialog(false)}
-                        className="bg-gray-600 hover:bg-gray-700"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleClearSandbox}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Clear
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+
+              {showManageFunctions && showManageFunctionsButton && (
+                <FunctionManager
+                  functions={functions}
+                  setFunctions={setFunctions}
+                  selectedFunction={selectedFunction}
+                  setSelectedFunction={setSelectedFunction}
+                />
+              )}
+
+              <div
+                ref={sandboxRef}
+                data-color-mode="dark"
+                className="bg-gray-700 rounded-md overflow-hidden"
+              >
+                <MDEditor
+                  value={sandboxText}
+                  onChange={(value) => setSandboxText(value || "")}
+                  preview="preview"
+                  className="!bg-gray-700"
+                  textareaProps={{
+                    placeholder: "Send text here...",
+                    className: "!bg-gray-700 !text-gray-100",
+                    onMouseUp: handleTextSelection,
+                  }}
+                  previewOptions={{
+                    className: "!bg-gray-700 !text-gray-100",
+                  }}
+                  height={isExpanded ? "calc(100vh - 140px)" : "320px"}
+                  style={{
+                    ...mdEditorStyles,
+                    transition: 'height 0.3s ease-in-out'
+                  }}
+                />
               </div>
-            )}
-
-            {showManageFunctions && showManageFunctionsButton && (
-              <FunctionManager
-                functions={functions}
-                setFunctions={setFunctions}
-                selectedFunction={selectedFunction}
-                setSelectedFunction={setSelectedFunction}
-              />
-            )}
-
-            <div
-              ref={sandboxRef}
-              data-color-mode="dark"
-              className="bg-gray-700 rounded-md overflow-hidden"
-            >
-              <MDEditor
-                value={sandboxText}
-                onChange={(value) => setSandboxText(value || "")}
-                preview="preview"
-                className="!bg-gray-700"
-                textareaProps={{
-                  placeholder: "Send text here...",
-                  className: "!bg-gray-700 !text-gray-100",
-                  onMouseUp: handleTextSelection,
-                }}
-                previewOptions={{
-                  className: "!bg-gray-700 !text-gray-100",
-                }}
-                height={isExpanded ? "calc(100vh - 140px)" : "320px"}
-                style={{
-                  ...mdEditorStyles,
-                  transition: 'height 0.3s ease-in-out'
-                }}
-              />
-            </div>
-          </>
-        )}
-      </CardContent>
+            </>
+          )}
+        </CardContent>
+      </div>
       {showSandboxQueue && (
         <SandboxQueue
           functions={functions}
